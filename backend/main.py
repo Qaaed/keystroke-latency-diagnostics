@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from fastapi.middleware.cors import CORSMiddleware
 
 import models, schemas
 from database import engine, get_db
@@ -9,6 +10,15 @@ from database import engine, get_db
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Keystroke Latency Diagnostics API")
+
+#middleware (CORS)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"], # Allows Next.js app
+    allow_credentials=True,
+    allow_methods=["*"], # Allows http methods
+    allow_headers=["*"],
+)
 
 @app.post("/telemetry/", response_model=schemas.TelemetryResponse)
 def create_telemetry(payload: schemas.TelemetryCreate, db: Session = Depends(get_db)):
