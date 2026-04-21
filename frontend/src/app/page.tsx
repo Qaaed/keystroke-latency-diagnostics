@@ -29,7 +29,7 @@ export default function Home() {
     setIsSending(true);
     try {
       const response = await fetch(
-        "https://qaaed-keystroke-api.hf.space/telemetry/",
+        `${process.env.NEXT_PUBLIC_API_URL}/telemetry/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
