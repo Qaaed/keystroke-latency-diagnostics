@@ -28,20 +28,23 @@ export default function Home() {
 
     setIsSending(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/telemetry/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hardware_profile: "GMMK Modular 60%",
-          wpm: stats.wpm,
-          accuracy: 100, // Hardcoded for now
-          keystroke_data: logs.map((log) => ({
-            key: log.key,
-            dwell_time: parseFloat(log.dwell),
-            flight_time: parseFloat(log.flight),
-          })),
-        }),
-      });
+      const response = await fetch(
+        "https://qaaed-keystroke-api.hf.space/telemetry/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hardware_profile: "GMMK Modular 60%",
+            wpm: stats.wpm,
+            accuracy: 100, // Hardcoded for now
+            keystroke_data: logs.map((log) => ({
+              key: log.key,
+              dwell_time: parseFloat(log.dwell),
+              flight_time: parseFloat(log.flight),
+            })),
+          }),
+        },
+      );
 
       if (response.ok) {
         alert("Telemetry synced to database! 🚀");
