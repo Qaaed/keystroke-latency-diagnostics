@@ -3,6 +3,7 @@ import { useTelemetry } from "@/hooks/useTelemetry";
 import { useState, useMemo } from "react";
 import LatencyChart from "@/components/LatencyChart";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
+import TypingEngine from "@/components/TypingEngine";
 
 export default function Home() {
   const logs = useTelemetry();
@@ -93,10 +94,8 @@ export default function Home() {
         </header>
 
         {/* INPUT AREA */}
-        <textarea
-          className="w-full h-40 bg-slate-900/50 border border-slate-800 p-6 rounded-lg focus:border-blue-500 outline-none transition-all text-xl"
-          placeholder="Start your diagnostic test..."
-        />
+        {/* INPUT AREA */}
+        <TypingEngine />
 
         {/* LIVE DATA FEED */}
         {/* DASHBOARD GRID */}
