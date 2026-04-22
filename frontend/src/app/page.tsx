@@ -2,6 +2,7 @@
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { useState, useMemo } from "react";
 import LatencyChart from "@/components/LatencyChart";
+import VirtualKeyboard from "@/components/VirtualKeyboard";
 
 export default function Home() {
   const logs = useTelemetry();
@@ -132,6 +133,7 @@ export default function Home() {
             </h2>
             <div className="flex-1 w-full">
               <LatencyChart logs={logs} />
+              <VirtualKeyboard logs={logs} />
             </div>
           </div>
         </div>
