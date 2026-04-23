@@ -19,10 +19,10 @@ app = FastAPI(title="Keystroke Latency Diagnostics API")
 # Middleware (CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://localhost:3000"], # Allows local Next.js app
+    allow_origins=["*"], # Allow all origins for testing
     allow_credentials=True,
     allow_methods=["*"], 
-    allow_headers=["*"],
+    allow_headers=["*"], # This ensures the 'Authorization' header is allowed
 )
 
 # SECURITY LAYER: FIREBASE JWT VERIFICATION
