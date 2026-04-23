@@ -4,11 +4,25 @@ import { useState, useMemo } from "react";
 import LatencyChart from "@/components/LatencyChart";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
 import TypingEngine from "@/components/TypingEngine";
+import { auth } from "@/lib/firebase";
+import LoginModal from "@/components/LoginModal";
+import { useEffect } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function Home() {
   const logs = useTelemetry();
   const [isSending, setIsSending] = useState(false);
 
+  const [user, setUser] = useState<any>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Listen for Firebase login state changes
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
   // --- WPM CALCULATION ---
   const stats = useMemo(() => {
     if (logs.length < 2) return { wpm: 0 };
@@ -28,13 +42,26 @@ export default function Home() {
   const saveTelemetry = async () => {
     if (logs.length === 0) return alert("No data to save!");
 
+    // 1. SAFETY CHECK: Ensure the user is logged in before trying to sync
+    if (!user) {
+      setIsAuthModalOpen(true); // Pops open the login modal
+      return alert("Please log in to authenticate your telemetry upload.");
+    }
+
     setIsSending(true);
     try {
+      // 2. SECURE TOKEN: Grab the JWT from the active Firebase session
+      const token = await user.getIdToken();
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/telemetry/`,
+        "https://qaaed-keystroke-api.hf.space/telemetry/",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            // 3. AUTH HEADER: Inject the secure token into the request
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             hardware_profile: "GMMK Modular 60%",
             wpm: stats.wpm,
@@ -55,7 +82,7 @@ export default function Home() {
         alert(`Failed to sync: ${errorText}`);
       }
     } catch (err) {
-      alert("Connection error! Is your Python backend running on port 8000?");
+      alert("Connection error! Is your Python backend running?");
       console.error(err);
     } finally {
       setIsSending(false);
@@ -66,6 +93,49 @@ export default function Home() {
     <main className="min-h-screen bg-slate-950 text-slate-100 p-12 font-mono">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* HEADER */}
+        {/* UPLOAD BUTTON */}
+        <button
+          onClick={saveTelemetry}
+          disabled={isSending || logs.length === 0 || !user}
+          className="px-6 py-2.5 bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 font-bold rounded-lg text-sm hover:bg-cyan-500 hover:text-black transition-all duration-300 disabled:opacity-50 shadow-[0_0_15px_rgba(34,211,238,0.15)]"
+        >
+          {isSending ? "SYNCING..." : "UPLOAD DATA"}
+        </button>
+
+        {/* --- NEW NATIVE AUTH UI --- */}
+        <div className="ml-4 border-l border-slate-800 pl-6 flex items-center">
+          {user ? (
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden md:block">
+                <div className="text-xs text-white font-bold">
+                  {user.displayName || "GUEST_USER"}
+                </div>
+                <button
+                  onClick={() => signOut(auth)}
+                  className="text-[10px] text-rose-400 hover:text-rose-300 uppercase tracking-widest"
+                >
+                  Terminate Session
+                </button>
+              </div>
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-10 h-10 rounded border-2 border-cyan-500/50"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded border-2 border-cyan-500/50 bg-slate-800"></div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="text-sm font-bold text-slate-400 hover:text-cyan-400 transition-colors tracking-widest"
+            >
+              SYSTEM_LOGIN
+            </button>
+          )}
+        </div>
         <header className="flex justify-between items-end border-b border-slate-800 pb-6">
           <div>
             <h1 className="text-2xl font-bold text-blue-500 tracking-tighter">
@@ -137,6 +207,10 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <LoginModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </main>
   );
 }
