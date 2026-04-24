@@ -1,5 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 
+// 🛑 THE BULLETPROOF GATEKEEPER
+const isValidKeystroke = (e: KeyboardEvent): boolean => {
+  // 1. Instantly block any keystroke combined with Alt, Ctrl, or Meta (Windows/Cmd)
+  if (e.altKey || e.ctrlKey || e.metaKey) return false;
+
+  // 2. Allow single typing characters (letters, numbers, punctuation, spacebar)
+  if (e.key.length === 1) return true;
+
+  // 3. Allow explicitly permitted system keys
+  if (["Backspace", "Shift"].includes(e.key)) return true;
+
+  // Block everything else (Tab, CapsLock, F1-F12, Arrow keys, standalone Alt, etc.)
+  return false;
+};
+
 export const useTelemetry = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const lastReleaseTime = useRef<number>(0);
@@ -7,12 +22,18 @@ export const useTelemetry = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Intercept before any timers start
+      if (!isValidKeystroke(e)) return;
+
       if (e.repeat) return; // Ignore auto-repeat when holding a key
       const now = performance.now(); // High-precision timestamp
       activeKeys.current[e.key] = now;
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // Intercept before calculating flight/dwell time
+      if (!isValidKeystroke(e)) return;
+
       const now = performance.now();
       const startTime = activeKeys.current[e.key];
 

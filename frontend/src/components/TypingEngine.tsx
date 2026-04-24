@@ -111,6 +111,30 @@ export default function TypingEngine() {
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
+  // THE GATEKEEPER: Filter out unwanted keys (Arrows, Tab, Alt, etc.)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isFinished) return;
+
+    // 1. INSTANTLY BLOCK MODIFIER COMBOS (Alt, Ctrl, Meta)
+    if (e.altKey || e.ctrlKey || e.metaKey) {
+      // We don't necessarily want to preventDefault here if they are trying
+      // to do a system command like Cmd+R to refresh, but we DO NOT want to
+      // count it as a valid typing input.
+      return;
+    }
+
+    // 2. Allow single character typing (letters, numbers, spacebar)
+    const isTypingChar = e.key.length === 1;
+
+    // 3. Allow specific control keys
+    const isAllowedControl = ["Backspace", "Shift"].includes(e.key);
+
+    // If it's not a typing char and not a permitted control key, block it!
+    if (!isTypingChar && !isAllowedControl) {
+      e.preventDefault();
+    }
+  };
+
   // Handle typing
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (isFinished) return;
@@ -147,6 +171,7 @@ export default function TypingEngine() {
       <textarea
         ref={inputRef}
         value={userInput}
+        onKeyDown={handleKeyDown}
         onChange={handleChange}
         className="absolute inset-0 opacity-0 cursor-text resize-none w-full h-full z-10"
         disabled={isFinished}
