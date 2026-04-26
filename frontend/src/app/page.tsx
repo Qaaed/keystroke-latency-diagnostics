@@ -1,8 +1,7 @@
-// frontend/src/app/page.tsx
 "use client";
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation"; // NEW: For redirecting
+import { useRouter } from "next/navigation";
 import LatencyChart from "@/components/LatencyChart";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
 import TypingEngine from "@/components/TypingEngine";
@@ -13,7 +12,6 @@ export default function Home() {
   const router = useRouter();
   const { logs, clearLogs } = useTelemetry();
   const [isSending, setIsSending] = useState(false);
-
   const [user, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
@@ -23,198 +21,164 @@ export default function Home() {
         setUser(currentUser);
         setIsAuthLoading(false);
       } else {
-        // BOUNCER: If not logged in, kick them to the login page
         router.push("/login");
       }
     });
     return () => unsubscribe();
   }, [router]);
 
-  // --- UPGRADED MATH ENGINE (True Live WPM) ---
   const stats = useMemo(() => {
     if (logs.length < 2) return { wpm: 0 };
-
     const totalCharacters = logs.length;
     const words = totalCharacters / 5; 
-
     let totalTimeMs = 0;
     logs.forEach((log) => {
       totalTimeMs += parseFloat(log.dwell) + parseFloat(log.flight);
     });
-
     let timeInMinutes = totalTimeMs / 1000 / 60;
     if (timeInMinutes < (2 / 60)) timeInMinutes = 2 / 60;
-
-    const wpm = Math.round(words / timeInMinutes);
-    return { wpm };
+    return { wpm: Math.round(words / timeInMinutes) };
   }, [logs]);
 
-  // --- SYNC FUNCTION ---
   const saveTelemetry = async () => {
-    if (logs.length === 0) return alert("No data to save!");
-    if (!user) return alert("User session lost. Please log in again.");
+    if (logs.length === 0) return alert("No data to save.");
+    if (!user) return alert("Session lost. Please sign in.");
 
     setIsSending(true);
     try {
       const token = await user.getIdToken();
-
-      const response = await fetch(
-        "https://qaaed-keystroke-api.hf.space/telemetry/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            hardware_profile: "GMMK Modular 60%", 
-            wpm: stats.wpm,
-            accuracy: 100, 
-            keystroke_data: logs.map((log) => ({
-              key: log.key,
-              dwell_time: parseFloat(log.dwell),
-              flight_time: parseFloat(log.flight),
-            })),
-          }),
+      const response = await fetch("https://qaaed-keystroke-api.hf.space/telemetry/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify({
+          hardware_profile: "GMMK Modular 60%", 
+          wpm: stats.wpm,
+          accuracy: 100, 
+          keystroke_data: logs.map((log) => ({
+            key: log.key,
+            dwell_time: parseFloat(log.dwell),
+            flight_time: parseFloat(log.flight),
+          })),
+        }),
+      });
 
-      if (response.ok) {
-        alert("Telemetry synced to database! 🚀");
-      } else {
-        const errorText = await response.text();
-        alert(`Failed to sync: ${errorText}`);
-      }
+      if (response.ok) alert("Telemetry synced successfully.");
+      else alert(`Failed to sync: ${await response.text()}`);
     } catch (err) {
-      alert("Connection error! Is your Python backend running?");
-      console.error(err);
+      alert("Connection error.");
     } finally {
       setIsSending(false);
     }
   };
 
-  // Keep the loading screen so the dashboard doesn't flash before they get kicked to /login
   if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center font-mono text-cyan-500 animate-pulse">
-        [ SYSTEM_BOOTING... ]
-      </div>
-    );
+    return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans text-zinc-500">Loading...</div>;
   }
 
-  // ==========================================
-  // MAIN DASHBOARD UI
-  // ==========================================
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-12 font-mono">
-      <div className="max-w-3xl mx-auto space-y-8">
+    <main className="min-h-screen bg-[#0a0a0a] text-zinc-300 p-6 md:p-12 font-sans selection:bg-zinc-800">
+      <div className="max-w-4xl mx-auto space-y-8">
         
-        {/* TOP BAR */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-          <button
-            onClick={saveTelemetry}
-            disabled={isSending || logs.length === 0}
-            className="px-6 py-2.5 bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 font-bold rounded-lg text-sm hover:bg-cyan-500 hover:text-black transition-all duration-300 disabled:opacity-50 shadow-[0_0_15px_rgba(34,211,238,0.15)]"
-          >
-            {isSending ? "SYNCING..." : "UPLOAD DATA"}
-          </button>
-
-          {/* NATIVE AUTH UI */}
-          <div className="flex items-center">
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden md:block">
-                <div className="text-xs text-white font-bold">
-                  {user.displayName || "GUEST_USER"}
-                </div>
-                <button
-                  onClick={() => signOut(auth)}
-                  className="text-[10px] text-rose-400 hover:text-rose-300 uppercase tracking-widest"
-                >
-                  Terminate Session
-                </button>
-              </div>
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt="Profile"
-                  className="w-10 h-10 rounded border-2 border-cyan-500/50"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded border-2 border-cyan-500/50 bg-slate-800"></div>
-              )}
-            </div>
+        {/* Clean Top Navigation */}
+        <nav className="flex justify-between items-center pb-6 border-b border-zinc-800/50">
+          <div className="flex items-center gap-3 text-sm">
+             <div className="flex h-2 w-2 relative">
+               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+             </div>
+             <span className="text-zinc-400">Database Connected</span>
           </div>
-        </div>
 
-        {/* HEADER */}
-        <header className="flex justify-between items-end border-b border-slate-800 pb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-blue-500 tracking-tighter">
-              KEYSTROKE_DIAG_V1
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-zinc-300 hidden md:block">
+              {user.displayName || "User"}
+            </span>
+            {user.photoURL && (
+              <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-zinc-700" />
+            )}
+            <button
+              onClick={() => signOut(auth)}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </nav>
+
+        {/* Header Section */}
+        <header className="flex justify-between items-end">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">
+              Diagnostic Session
             </h1>
-            <p className="text-slate-500 text-xs mt-1">
-              SENSORS: ACTIVE | DB: CONNECTED
+            <p className="text-zinc-500 text-sm">
+              Analyzing hardware latency for GMMK Modular 60%
             </p>
           </div>
 
           <div className="flex items-end gap-6">
             <div className="text-right">
-              <div className="text-4xl font-black text-white">
-                {stats.wpm} <span className="text-sm text-slate-500 font-normal">WPM</span>
+              <div className="text-5xl font-light text-zinc-100 tracking-tighter">
+                {stats.wpm} <span className="text-base text-zinc-500 font-normal tracking-normal">WPM</span>
               </div>
             </div>
-            <button
-              onClick={saveTelemetry}
-              disabled={isSending || logs.length === 0}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed h-fit mb-1"
-            >
-              {isSending ? "SYNCING..." : "SYNC TO CLOUD"}
-            </button>
           </div>
         </header>
 
         {/* INPUT AREA */}
         <TypingEngine onReset={clearLogs} />
 
+        {/* Quick Actions */}
+        <div className="flex justify-end">
+          <button
+            onClick={saveTelemetry}
+            disabled={isSending || logs.length === 0}
+            className="bg-zinc-100 text-zinc-900 hover:bg-white px-5 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSending ? "Syncing..." : "Sync Telemetry"}
+          </button>
+        </div>
+
         {/* DASHBOARD GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-80">
           
-          {/* LEFT: LIVE FEED */}
-          <div className="bg-black p-4 border border-slate-800 rounded-lg overflow-y-auto flex flex-col">
-            <h2 className="text-xs text-slate-500 mb-4 uppercase tracking-widest sticky top-0 bg-black pb-2 border-b border-slate-900">
+          {/* LIVE FEED */}
+          <div className="bg-zinc-900/40 p-5 border border-zinc-800 rounded-xl overflow-y-auto flex flex-col">
+            <h2 className="text-xs text-zinc-500 mb-4 font-medium sticky top-0 bg-transparent">
               Live Feed
             </h2>
             {logs.length === 0 ? (
-              <span className="text-slate-600 italic">// Waiting...</span>
+              <span className="text-zinc-600 text-sm italic">Awaiting input...</span>
             ) : (
-              <div className="flex-1 overflow-y-auto pr-2">
+              <div className="flex-1 overflow-y-auto pr-2 font-mono text-xs">
                 {logs.slice(-10).map((log, i) => (
-                  <div
-                    key={i}
-                    className="text-xs py-1.5 border-b border-slate-900 flex justify-between"
-                  >
-                    <span className="text-blue-400 font-bold">
+                  <div key={i} className="py-2 border-b border-zinc-800/50 flex justify-between items-center">
+                    <span className="text-zinc-300 font-medium bg-zinc-800 px-2 py-0.5 rounded">
                       {log.key === " " ? "SPC" : log.key}
                     </span>
-                    <span className="text-green-400">{log.dwell}</span>
-                    <span className="text-yellow-400">{log.flight}</span>
+                    <span className="text-zinc-500">{log.dwell}ms</span>
+                    <span className="text-zinc-500">{log.flight}ms</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* RIGHT: CHART */}
-          <div className="bg-slate-900/30 p-4 border border-slate-800 rounded-lg md:col-span-2 flex flex-col">
-            <h2 className="text-xs text-slate-500 mb-4 uppercase tracking-widest">
-              Average Latency by Key
+          {/* CHART AREA */}
+          <div className="bg-zinc-900/40 p-5 border border-zinc-800 rounded-xl md:col-span-2 flex flex-col">
+            <h2 className="text-xs text-zinc-500 mb-4 font-medium">
+              Latency Visualizer
             </h2>
-            <div className="flex-1 w-full">
+            <div className="flex-1 w-full opacity-80 mix-blend-screen">
               <LatencyChart logs={logs} />
               <VirtualKeyboard logs={logs} />
             </div>
           </div>
         </div>
+        
       </div>
     </main>
   );

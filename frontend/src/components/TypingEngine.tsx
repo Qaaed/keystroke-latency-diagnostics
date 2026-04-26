@@ -166,7 +166,7 @@ export default function TypingEngine({ onReset }: { onReset: () => void }) {
 
   return (
     <div
-      className="w-full relative bg-slate-900/30 p-8 rounded-lg border border-slate-800 cursor-text min-h-[200px]"
+      className="w-full relative bg-zinc-900/50 p-8 rounded-xl border border-zinc-800 cursor-text min-h-[200px] shadow-sm"
       onClick={() => inputRef.current?.focus()}
     >
       {/* Hidden text area to capture mobile & desktop input natively */}
