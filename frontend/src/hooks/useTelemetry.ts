@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-// 🛑 THE BULLETPROOF GATEKEEPER
 const isValidKeystroke = (e: KeyboardEvent): boolean => {
   // 1. Instantly block any keystroke combined with Alt, Ctrl, or Meta (Windows/Cmd)
   if (e.altKey || e.ctrlKey || e.metaKey) return false;
@@ -44,16 +43,14 @@ export const useTelemetry = () => {
           : 0;
 
         // Save the data packet
-        setLogs((prev) =>
-          [
-            ...prev,
-            {
-              key: e.key,
-              dwell: dwell.toFixed(2),
-              flight: flight.toFixed(2),
-            },
-          ].slice(-10),
-        ); // Keep only the last 10 for the live feed
+        setLogs((prev) => [
+          ...prev,
+          {
+            key: e.key,
+            dwell: dwell.toFixed(2),
+            flight: flight.toFixed(2),
+          },
+        ]); 
 
         lastReleaseTime.current = now;
         delete activeKeys.current[e.key];
@@ -69,5 +66,13 @@ export const useTelemetry = () => {
     };
   }, []);
 
-  return logs;
+  // NEW: A function to completely wipe the slate clean
+  const clearLogs = () => {
+    setLogs([]);
+    lastReleaseTime.current = 0; // Resets flight time so it doesn't span across tests
+    activeKeys.current = {};
+  };
+
+  // Change the return to an object so we can access both the data and the reset function!
+  return { logs, clearLogs };
 };

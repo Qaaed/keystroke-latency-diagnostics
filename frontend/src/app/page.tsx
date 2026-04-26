@@ -1,56 +1,61 @@
+// frontend/src/app/page.tsx
 "use client";
 import { useTelemetry } from "@/hooks/useTelemetry";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation"; // NEW: For redirecting
 import LatencyChart from "@/components/LatencyChart";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
 import TypingEngine from "@/components/TypingEngine";
 import { auth } from "@/lib/firebase";
-import LoginModal from "@/components/LoginModal";
-import { useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function Home() {
-  const logs = useTelemetry();
+  const router = useRouter();
+  const { logs, clearLogs } = useTelemetry();
   const [isSending, setIsSending] = useState(false);
 
   const [user, setUser] = useState<any>(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    // Listen for Firebase login state changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      if (currentUser) {
+        setUser(currentUser);
+        setIsAuthLoading(false);
+      } else {
+        // BOUNCER: If not logged in, kick them to the login page
+        router.push("/login");
+      }
     });
     return () => unsubscribe();
-  }, []);
-  // --- WPM CALCULATION ---
+  }, [router]);
+
+  // --- UPGRADED MATH ENGINE (True Live WPM) ---
   const stats = useMemo(() => {
     if (logs.length < 2) return { wpm: 0 };
 
-    const charCount = logs.length;
-    const totalTimeMs = logs.reduce(
-      (acc, log) => acc + parseFloat(log.dwell) + parseFloat(log.flight),
-      0,
-    );
-    const timeInMinutes = totalTimeMs / 1000 / 60;
-    const wpm = charCount / 5 / timeInMinutes;
+    const totalCharacters = logs.length;
+    const words = totalCharacters / 5; 
 
-    return { wpm: Math.round(wpm) };
+    let totalTimeMs = 0;
+    logs.forEach((log) => {
+      totalTimeMs += parseFloat(log.dwell) + parseFloat(log.flight);
+    });
+
+    let timeInMinutes = totalTimeMs / 1000 / 60;
+    if (timeInMinutes < (2 / 60)) timeInMinutes = 2 / 60;
+
+    const wpm = Math.round(words / timeInMinutes);
+    return { wpm };
   }, [logs]);
 
   // --- SYNC FUNCTION ---
   const saveTelemetry = async () => {
     if (logs.length === 0) return alert("No data to save!");
-
-    // 1. SAFETY CHECK: Ensure the user is logged in before trying to sync
-    if (!user) {
-      setIsAuthModalOpen(true); // Pops open the login modal
-      return alert("Please log in to authenticate your telemetry upload.");
-    }
+    if (!user) return alert("User session lost. Please log in again.");
 
     setIsSending(true);
     try {
-      // 2. SECURE TOKEN: Grab the JWT from the active Firebase session
       const token = await user.getIdToken();
 
       const response = await fetch(
@@ -59,13 +64,12 @@ export default function Home() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            // 3. AUTH HEADER: Inject the secure token into the request
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            hardware_profile: "GMMK Modular 60%",
+            hardware_profile: "GMMK Modular 60%", 
             wpm: stats.wpm,
-            accuracy: 100, // Hardcoded for now
+            accuracy: 100, 
             keystroke_data: logs.map((log) => ({
               key: log.key,
               dwell_time: parseFloat(log.dwell),
@@ -89,22 +93,34 @@ export default function Home() {
     }
   };
 
+  // Keep the loading screen so the dashboard doesn't flash before they get kicked to /login
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center font-mono text-cyan-500 animate-pulse">
+        [ SYSTEM_BOOTING... ]
+      </div>
+    );
+  }
+
+  // ==========================================
+  // MAIN DASHBOARD UI
+  // ==========================================
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-12 font-mono">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* HEADER */}
-        {/* UPLOAD BUTTON */}
-        <button
-          onClick={saveTelemetry}
-          disabled={isSending || logs.length === 0 || !user}
-          className="px-6 py-2.5 bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 font-bold rounded-lg text-sm hover:bg-cyan-500 hover:text-black transition-all duration-300 disabled:opacity-50 shadow-[0_0_15px_rgba(34,211,238,0.15)]"
-        >
-          {isSending ? "SYNCING..." : "UPLOAD DATA"}
-        </button>
+        
+        {/* TOP BAR */}
+        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+          <button
+            onClick={saveTelemetry}
+            disabled={isSending || logs.length === 0}
+            className="px-6 py-2.5 bg-cyan-500/10 border border-cyan-500/50 text-cyan-400 font-bold rounded-lg text-sm hover:bg-cyan-500 hover:text-black transition-all duration-300 disabled:opacity-50 shadow-[0_0_15px_rgba(34,211,238,0.15)]"
+          >
+            {isSending ? "SYNCING..." : "UPLOAD DATA"}
+          </button>
 
-        {/* --- NEW NATIVE AUTH UI --- */}
-        <div className="ml-4 border-l border-slate-800 pl-6 flex items-center">
-          {user ? (
+          {/* NATIVE AUTH UI */}
+          <div className="flex items-center">
             <div className="flex items-center gap-4">
               <div className="text-right hidden md:block">
                 <div className="text-xs text-white font-bold">
@@ -127,15 +143,10 @@ export default function Home() {
                 <div className="w-10 h-10 rounded border-2 border-cyan-500/50 bg-slate-800"></div>
               )}
             </div>
-          ) : (
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="text-sm font-bold text-slate-400 hover:text-cyan-400 transition-colors tracking-widest"
-            >
-              SYSTEM_LOGIN
-            </button>
-          )}
+          </div>
         </div>
+
+        {/* HEADER */}
         <header className="flex justify-between items-end border-b border-slate-800 pb-6">
           <div>
             <h1 className="text-2xl font-bold text-blue-500 tracking-tighter">
@@ -149,8 +160,7 @@ export default function Home() {
           <div className="flex items-end gap-6">
             <div className="text-right">
               <div className="text-4xl font-black text-white">
-                {stats.wpm}{" "}
-                <span className="text-sm text-slate-500 font-normal">WPM</span>
+                {stats.wpm} <span className="text-sm text-slate-500 font-normal">WPM</span>
               </div>
             </div>
             <button
@@ -164,13 +174,12 @@ export default function Home() {
         </header>
 
         {/* INPUT AREA */}
-        {/* INPUT AREA */}
-        <TypingEngine />
+        <TypingEngine onReset={clearLogs} />
 
-        {/* LIVE DATA FEED */}
         {/* DASHBOARD GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-80">
-          {/* LEFT: LIVE FEED (1 Column) */}
+          
+          {/* LEFT: LIVE FEED */}
           <div className="bg-black p-4 border border-slate-800 rounded-lg overflow-y-auto flex flex-col">
             <h2 className="text-xs text-slate-500 mb-4 uppercase tracking-widest sticky top-0 bg-black pb-2 border-b border-slate-900">
               Live Feed
@@ -179,7 +188,7 @@ export default function Home() {
               <span className="text-slate-600 italic">// Waiting...</span>
             ) : (
               <div className="flex-1 overflow-y-auto pr-2">
-                {logs.map((log, i) => (
+                {logs.slice(-10).map((log, i) => (
                   <div
                     key={i}
                     className="text-xs py-1.5 border-b border-slate-900 flex justify-between"
@@ -195,7 +204,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* RIGHT: CHART (2 Columns) */}
+          {/* RIGHT: CHART */}
           <div className="bg-slate-900/30 p-4 border border-slate-800 rounded-lg md:col-span-2 flex flex-col">
             <h2 className="text-xs text-slate-500 mb-4 uppercase tracking-widest">
               Average Latency by Key
@@ -207,10 +216,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <LoginModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
     </main>
   );
 }

@@ -85,7 +85,7 @@ const generateWords = (count: number) => {
   ).join(" ");
 };
 
-export default function TypingEngine() {
+export default function TypingEngine({ onReset }: { onReset: () => void }) {
   const [targetText, setTargetText] = useState("");
   const [userInput, setUserInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(15); // 15 second test
@@ -150,6 +150,8 @@ export default function TypingEngine() {
     setUserInput("");
     setTargetText(generateWords(30));
     inputRef.current?.focus();
+    //parent to wipe the telemetry logs!
+    onReset();
   };
 
   // Calculate local accuracy (Target characters matched vs Total typed)
