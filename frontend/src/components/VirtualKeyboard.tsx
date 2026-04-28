@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { TelemetryLog } from "@/types/telemetry";
 
 const KEYBOARD_ROWS = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
@@ -6,7 +7,7 @@ const KEYBOARD_ROWS = [
   ["Z", "X", "C", "V", "B", "N", "M"],
 ];
 
-export default function VirtualKeyboard({ logs }: { logs: any[] }) {
+export default function VirtualKeyboard({ logs }: { logs: TelemetryLog[] }) {
   // 1. Calculate average dwell time for each key
   const keyStats = useMemo(() => {
     const stats: Record<string, { total: number; count: number; avg: number }> =
@@ -48,17 +49,13 @@ export default function VirtualKeyboard({ logs }: { logs: any[] }) {
   };
 
   return (
-    <div className="w-full flex flex-col items-center gap-2 bg-slate-900/50 p-6 rounded-lg border border-slate-800">
-      <h3 className="text-xs text-slate-500 uppercase tracking-widest w-full text-left mb-2">
-        Latency Heatmap
-      </h3>
-
+    <div className="flex w-full flex-col items-center gap-2 overflow-hidden">
       {KEYBOARD_ROWS.map((row, rowIndex) => (
-        <div key={rowIndex} className="flex gap-2">
+        <div key={rowIndex} className="flex w-full justify-center gap-1.5 sm:gap-2">
           {row.map((key) => (
             <div
               key={key}
-              className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded font-bold text-sm transition-all duration-300 ${getKeyColor(key)}`}
+              className={`flex h-9 w-[clamp(1.75rem,8vw,3rem)] items-center justify-center rounded-md text-sm font-bold transition-all duration-300 sm:h-11 ${getKeyColor(key)}`}
             >
               {key}
             </div>
@@ -66,15 +63,15 @@ export default function VirtualKeyboard({ logs }: { logs: any[] }) {
         </div>
       ))}
 
-      <div className="flex gap-4 text-xs text-slate-500 mt-4">
+      <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-green-500/80 rounded"></div> Fast
+          <span className="h-3 w-3 rounded bg-green-500/80"></span> Fast
         </span>
         <span className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-yellow-500/80 rounded"></div> Average
+          <span className="h-3 w-3 rounded bg-yellow-500/80"></span> Average
         </span>
         <span className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-red-500/80 rounded"></div> Slow
+          <span className="h-3 w-3 rounded bg-red-500/80"></span> Slow
         </span>
       </div>
     </div>

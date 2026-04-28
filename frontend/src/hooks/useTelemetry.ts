@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { TelemetryLog } from "@/types/telemetry";
 
 const isValidKeystroke = (e: KeyboardEvent): boolean => {
   // 1. Instantly block any keystroke combined with Alt, Ctrl, or Meta (Windows/Cmd)
@@ -15,7 +16,7 @@ const isValidKeystroke = (e: KeyboardEvent): boolean => {
 };
 
 export const useTelemetry = () => {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<TelemetryLog[]>([]);
   const lastReleaseTime = useRef<number>(0);
   const activeKeys = useRef<Record<string, number>>({});
 

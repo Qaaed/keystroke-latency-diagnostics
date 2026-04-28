@@ -8,8 +8,9 @@ import {
   Legend,
 } from "recharts";
 import { useMemo } from "react";
+import type { TelemetryLog } from "@/types/telemetry";
 
-export default function LatencyChart({ logs }: { logs: any[] }) {
+export default function LatencyChart({ logs }: { logs: TelemetryLog[] }) {
   // This memoized function crunches the raw logs into averages per key
   const chartData = useMemo(() => {
     if (logs.length === 0) return [];

@@ -19,10 +19,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     try {
       await signInWithPopup(auth, googleProvider);
       onClose(); // Close modal on success
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setError(
-        err.message || "Failed to authenticate with authorization server.",
+        err instanceof Error
+          ? err.message
+          : "Failed to authenticate with authorization server.",
       );
     } finally {
       setIsAuthenticating(false);

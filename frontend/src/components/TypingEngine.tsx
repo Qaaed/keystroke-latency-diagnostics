@@ -86,7 +86,7 @@ const generateWords = (count: number) => {
 };
 
 export default function TypingEngine({ onReset }: { onReset: () => void }) {
-  const [targetText, setTargetText] = useState("");
+  const [targetText, setTargetText] = useState(() => generateWords(30));
   const [userInput, setUserInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(15); // 15 second test
   const [isActive, setIsActive] = useState(false);
@@ -94,19 +94,21 @@ export default function TypingEngine({ onReset }: { onReset: () => void }) {
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Initialize text on mount
-  useEffect(() => {
-    setTargetText(generateWords(30));
-  }, []);
-
   // Timer logic
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0) {
-      setIsActive(false);
-      setIsFinished(true);
+      interval = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            setIsActive(false);
+            setIsFinished(true);
+            return 0;
+          }
+
+          return prev - 1;
+        });
+      }, 1000);
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);

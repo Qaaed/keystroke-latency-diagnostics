@@ -1,4 +1,9 @@
-export const calculateMetrics = (logs: any[], testDurationSeconds = 15) => {
+import type { TelemetryLog } from "@/types/telemetry";
+
+export const calculateMetrics = (
+  logs: TelemetryLog[],
+  testDurationSeconds = 15,
+) => {
   if (logs.length === 0) {
     return { wpm: 0, avgDwell: 0, avgFlight: 0 };
   }
