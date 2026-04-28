@@ -19,7 +19,7 @@ export default function VirtualKeyboard({ logs }: { logs: TelemetryLog[] }) {
       // Only track alphabet keys for the visualizer to keep it clean
       if (!/^[A-Z]$/.test(key)) return;
 
-      const dwell = parseFloat(log.dwell);
+      const dwell = log.dwellMs;
       if (!stats[key]) stats[key] = { total: 0, count: 0, avg: 0 };
 
       stats[key].total += dwell;

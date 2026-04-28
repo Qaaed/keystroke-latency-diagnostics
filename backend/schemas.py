@@ -5,8 +5,14 @@ from datetime import datetime
 # This represents a single keypress event
 class KeystrokeEntry(BaseModel):
     key: str
+    code: Optional[str] = None
+    sequence: Optional[int] = None
+    down_at: Optional[float] = None
+    up_at: Optional[float] = None
     dwell_time: float
     flight_time: float
+    expected_key: Optional[str] = None
+    is_correct: Optional[bool] = None
 
 # This is what the Frontend will send to the Backend
 class TelemetryCreate(BaseModel):

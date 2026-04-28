@@ -17,7 +17,13 @@ export default function LatencyChart({ logs }: { logs: TelemetryLog[] }) {
 
     const grouped: Record<
       string,
-      { key: string; totalDwell: number; totalFlight: number; count: number }
+      {
+        key: string;
+        totalDwell: number;
+        totalFlight: number;
+        count: number;
+        flightCount: number;
+      }
     > = {};
 
     logs.forEach((log) => {
@@ -25,9 +31,18 @@ export default function LatencyChart({ logs }: { logs: TelemetryLog[] }) {
       const k = log.key === " " ? "SPACE" : log.key.toUpperCase();
 
       if (!grouped[k])
-        grouped[k] = { key: k, totalDwell: 0, totalFlight: 0, count: 0 };
-      grouped[k].totalDwell += parseFloat(log.dwell);
-      grouped[k].totalFlight += parseFloat(log.flight);
+        grouped[k] = {
+          key: k,
+          totalDwell: 0,
+          totalFlight: 0,
+          count: 0,
+          flightCount: 0,
+        };
+      grouped[k].totalDwell += log.dwellMs;
+      if (log.sequence > 0) {
+        grouped[k].totalFlight += log.flightMs;
+        grouped[k].flightCount += 1;
+      }
       grouped[k].count += 1;
     });
 
@@ -36,7 +51,10 @@ export default function LatencyChart({ logs }: { logs: TelemetryLog[] }) {
       .map((item) => ({
         key: item.key,
         avgDwell: Math.round(item.totalDwell / item.count),
-        avgFlight: Math.round(item.totalFlight / item.count),
+        avgFlight:
+          item.flightCount > 0
+            ? Math.round(item.totalFlight / item.flightCount)
+            : 0,
       }))
       .sort((a, b) => b.avgDwell - a.avgDwell); // Highest dwell time first
   }, [logs]);

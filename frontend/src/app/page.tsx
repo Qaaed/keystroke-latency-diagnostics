@@ -11,7 +11,7 @@ import type { User } from "firebase/auth";
 
 export default function Home() {
   const router = useRouter();
-  const { logs, clearLogs } = useTelemetry();
+  const { logs, clearLogs, recordKeyDown, recordKeyUp } = useTelemetry();
   const [isSending, setIsSending] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -51,8 +51,14 @@ export default function Home() {
           accuracy: 100, 
           keystroke_data: logs.map((log) => ({
             key: log.key,
-            dwell_time: parseFloat(log.dwell),
-            flight_time: parseFloat(log.flight),
+            code: log.code,
+            sequence: log.sequence,
+            down_at: log.downAt,
+            up_at: log.upAt,
+            dwell_time: log.dwellMs,
+            flight_time: log.flightMs,
+            expected_key: log.expectedKey,
+            is_correct: log.isCorrect,
           })),
         }),
       });
@@ -168,6 +174,8 @@ export default function Home() {
             <TypingEngine
               logs={logs}
               onReset={clearLogs}
+              onTelemetryKeyDown={recordKeyDown}
+              onTelemetryKeyUp={recordKeyUp}
               onFinishedChange={setIsTestComplete}
               onWpmChange={setWpm}
             />
@@ -201,10 +209,10 @@ export default function Home() {
                             {log.key === " " ? "SPC" : log.key}
                           </span>
                           <span className="text-zinc-500">
-                            Dwell {log.dwell}ms
+                            Dwell {log.dwellMs.toFixed(2)}ms
                           </span>
                           <span className="text-zinc-500">
-                            Flight {log.flight}ms
+                            Flight {log.flightMs.toFixed(2)}ms
                           </span>
                         </div>
                       ))}

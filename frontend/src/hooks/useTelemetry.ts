@@ -1,79 +1,98 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { TelemetryLog } from "@/types/telemetry";
 
-const isValidKeystroke = (e: KeyboardEvent): boolean => {
-  // 1. Instantly block any keystroke combined with Alt, Ctrl, or Meta (Windows/Cmd)
+type TelemetryKeyContext = {
+  expectedKey?: string | null;
+  isCorrect?: boolean | null;
+};
+
+type ActiveKey = {
+  code: string;
+  downAt: number;
+  flightMs: number;
+  expectedKey: string | null;
+  isCorrect: boolean | null;
+};
+
+const isValidKeystroke = (
+  e: React.KeyboardEvent<HTMLTextAreaElement>,
+): boolean => {
   if (e.altKey || e.ctrlKey || e.metaKey) return false;
 
-  // 2. Allow single typing characters (letters, numbers, punctuation, spacebar)
   if (e.key.length === 1) return true;
 
-  // 3. Allow explicitly permitted system keys
-  if (["Backspace", "Shift"].includes(e.key)) return true;
+  if (["Backspace", "Enter", "Shift"].includes(e.key)) return true;
 
-  // Block everything else (Tab, CapsLock, F1-F12, Arrow keys, standalone Alt, etc.)
   return false;
 };
 
 export const useTelemetry = () => {
   const [logs, setLogs] = useState<TelemetryLog[]>([]);
-  const lastReleaseTime = useRef<number>(0);
-  const activeKeys = useRef<Record<string, number>>({});
+  const lastReleaseTimeRef = useRef<number | null>(null);
+  const activeKeysRef = useRef<Record<string, ActiveKey>>({});
+  const sequenceRef = useRef(0);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Intercept before any timers start
+  const recordKeyDown = useCallback(
+    (
+      e: React.KeyboardEvent<HTMLTextAreaElement>,
+      context: TelemetryKeyContext = {},
+    ) => {
+      if (!isValidKeystroke(e) || e.repeat) return;
+
+      const downAt = performance.now();
+      activeKeysRef.current[e.code] = {
+        code: e.code,
+        downAt,
+        flightMs:
+          lastReleaseTimeRef.current === null
+            ? 0
+            : downAt - lastReleaseTimeRef.current,
+        expectedKey: context.expectedKey ?? null,
+        isCorrect: context.isCorrect ?? null,
+      };
+    },
+    [],
+  );
+
+  const recordKeyUp = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (!isValidKeystroke(e)) return;
 
-      if (e.repeat) return; // Ignore auto-repeat when holding a key
-      const now = performance.now(); // High-precision timestamp
-      activeKeys.current[e.key] = now;
-    };
+      const upAt = performance.now();
+      const activeKey = activeKeysRef.current[e.code];
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      // Intercept before calculating flight/dwell time
-      if (!isValidKeystroke(e)) return;
+      if (activeKey) {
+        const sequence = sequenceRef.current;
+        sequenceRef.current += 1;
 
-      const now = performance.now();
-      const startTime = activeKeys.current[e.key];
-
-      if (startTime) {
-        const dwell = now - startTime;
-        const flight = lastReleaseTime.current
-          ? now - lastReleaseTime.current
-          : 0;
-
-        // Save the data packet
         setLogs((prev) => [
           ...prev,
           {
             key: e.key,
-            dwell: dwell.toFixed(2),
-            flight: flight.toFixed(2),
+            code: activeKey.code,
+            sequence,
+            downAt: activeKey.downAt,
+            upAt,
+            dwellMs: upAt - activeKey.downAt,
+            flightMs: activeKey.flightMs,
+            expectedKey: activeKey.expectedKey,
+            isCorrect: activeKey.isCorrect,
           },
-        ]); 
+        ]);
 
-        lastReleaseTime.current = now;
-        delete activeKeys.current[e.key];
+        lastReleaseTimeRef.current = upAt;
+        delete activeKeysRef.current[e.code];
       }
-    };
+    },
+    [],
+  );
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
-
-  // NEW: A function to completely wipe the slate clean
   const clearLogs = () => {
     setLogs([]);
-    lastReleaseTime.current = 0; // Resets flight time so it doesn't span across tests
-    activeKeys.current = {};
+    lastReleaseTimeRef.current = null;
+    activeKeysRef.current = {};
+    sequenceRef.current = 0;
   };
 
-  // Change the return to an object so we can access both the data and the reset function!
-  return { logs, clearLogs };
+  return { logs, clearLogs, recordKeyDown, recordKeyUp };
 };

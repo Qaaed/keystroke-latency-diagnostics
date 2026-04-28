@@ -9,14 +9,13 @@ export const calculateMetrics = (
 
   let totalDwell = 0;
   let totalFlight = 0;
-  let validFlights = 0; // We skip the first keystroke since flight time is always 0
+  let validFlights = 0;
 
   logs.forEach((log) => {
-    totalDwell += parseFloat(log.dwell);
-    
-    const flightTime = parseFloat(log.flight);
-    if (flightTime > 0) {
-      totalFlight += flightTime;
+    totalDwell += log.dwellMs;
+
+    if (log.sequence > 0) {
+      totalFlight += log.flightMs;
       validFlights++;
     }
   });

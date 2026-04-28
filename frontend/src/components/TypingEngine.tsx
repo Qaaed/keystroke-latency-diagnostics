@@ -7,6 +7,11 @@ type TypingMode = "time" | "words" | "code";
 type TypingEngineProps = {
   logs: TelemetryLog[];
   onReset: () => void;
+  onTelemetryKeyDown: (
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    context: { expectedKey: string | null; isCorrect: boolean | null },
+  ) => void;
+  onTelemetryKeyUp: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onFinishedChange?: (isFinished: boolean) => void;
   onWpmChange?: (wpm: number) => void;
 };
@@ -98,10 +103,10 @@ const WORD_LIST = [
 ];
 
 const CODE_SNIPPETS = [
-  "const latency = samples.map((key) => key.dwell).reduce((sum, value) => sum + value, 0);",
+  "const latency = samples.map((key) => key.dwellMs).reduce((sum, value) => sum + value, 0);",
   "function calculateWpm(chars, seconds) { return Math.round((chars / 5) / (seconds / 60)); }",
   "if (event.key.length === 1 && !event.repeat) activeKeys[event.key] = performance.now();",
-  "type TelemetryLog = { key: string; dwell: string; flight: string };",
+  "type TelemetryLog = { key: string; dwellMs: number; flightMs: number };",
 ];
 
 const generateWords = (count: number) => {
@@ -118,6 +123,8 @@ const generateCode = () => {
 export default function TypingEngine({
   logs,
   onReset,
+  onTelemetryKeyDown,
+  onTelemetryKeyUp,
   onFinishedChange,
   onWpmChange,
 }: TypingEngineProps) {
@@ -134,6 +141,7 @@ export default function TypingEngine({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const startedAtRef = useRef<number | null>(null);
   const endsAtRef = useRef<number | null>(null);
+  const pendingFinishInputRef = useRef<string | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -157,6 +165,7 @@ export default function TypingEngine({
     setTargetText(buildTargetText(nextMode, nextWordCount));
     startedAtRef.current = null;
     endsAtRef.current = null;
+    pendingFinishInputRef.current = null;
     onFinishedChange?.(false);
     onWpmChange?.(0);
     onReset();
@@ -271,8 +280,24 @@ export default function TypingEngine({
       return;
     }
 
+    const expectedKey = targetText[userInput.length] ?? null;
+    const isCorrect =
+      isTypingChar || e.key === "Enter" ? e.key === expectedKey : null;
+
+    onTelemetryKeyDown(e, { expectedKey, isCorrect });
+
     if (isTypingChar || e.key === "Enter") {
       startTest();
+    }
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    onTelemetryKeyUp(e);
+
+    if (pendingFinishInputRef.current !== null) {
+      const finalInput = pendingFinishInputRef.current;
+      pendingFinishInputRef.current = null;
+      finishTest(finalInput);
     }
   };
 
@@ -283,7 +308,7 @@ export default function TypingEngine({
     setUserInput(nextInput);
 
     if (nextInput.length >= targetText.length) {
-      finishTest(nextInput);
+      pendingFinishInputRef.current = nextInput;
     }
   };
 
@@ -415,6 +440,7 @@ export default function TypingEngine({
               ref={inputRef}
               value={userInput}
               onKeyDown={handleKeyDown}
+              onKeyUp={handleKeyUp}
               onChange={handleChange}
               className="absolute inset-0 z-10 h-full w-full cursor-text resize-none opacity-0"
               autoFocus
