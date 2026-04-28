@@ -35,17 +35,13 @@ export default function VirtualKeyboard({ logs }: { logs: TelemetryLog[] }) {
   // 2. Helper to get color based on latency (Green = Fast, Red = Slow)
   const getKeyColor = (key: string) => {
     const stat = keyStats.stats[key];
-    if (!stat) return "bg-slate-800 text-slate-500"; // Untyped keys
+    if (!stat) return "bg-slate-800 text-slate-500 border-slate-800";
 
-    // Normalize between 0 and 1
     const ratio = stat.avg / (keyStats.maxDwell || 1);
 
-    // Simple gradient: Fast (< 0.5) is green, Slow (> 0.5) is red/orange
-    if (ratio > 0.7)
-      return "bg-red-500/80 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]";
-    if (ratio > 0.4)
-      return "bg-yellow-500/80 text-white shadow-[0_0_15px_rgba(234,179,8,0.5)]";
-    return "bg-green-500/80 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]";
+    if (ratio > 0.7) return "bg-red-500/80 text-white border-red-400/60 shadow-[0_0_15px_rgba(239,68,68,0.5)]";
+    if (ratio > 0.4) return "bg-yellow-500/80 text-white border-yellow-400/60 shadow-[0_0_15px_rgba(234,179,8,0.5)]";
+    return "bg-green-500/80 text-white border-green-400/60 shadow-[0_0_15px_rgba(34,197,94,0.5)]";
   };
 
   return (
@@ -55,7 +51,7 @@ export default function VirtualKeyboard({ logs }: { logs: TelemetryLog[] }) {
           {row.map((key) => (
             <div
               key={key}
-              className={`flex h-9 w-[clamp(1.75rem,8vw,3rem)] items-center justify-center rounded-md text-sm font-bold transition-all duration-300 sm:h-11 ${getKeyColor(key)}`}
+              className={`flex h-9 w-[clamp(1.75rem,8vw,3rem)] items-center justify-center rounded-md border text-sm font-bold transition-all duration-300 sm:h-11 ${getKeyColor(key)}`}
             >
               {key}
             </div>

@@ -2,19 +2,11 @@ import type { TelemetryLog } from "@/types/telemetry";
 
 export const calculateMetrics = (
   logs: TelemetryLog[],
-  testDurationSeconds = 15,
 ) => {
   if (logs.length === 0) {
-    return { wpm: 0, avgDwell: 0, avgFlight: 0 };
+    return { avgDwell: 0, avgFlight: 0 };
   }
 
-  // 1. Calculate WPM (Standard: 5 characters = 1 word)
-  const totalCharacters = logs.length;
-  const words = totalCharacters / 5;
-  const timeInMinutes = testDurationSeconds / 60;
-  const wpm = Math.round(words / timeInMinutes);
-
-  // 2. Calculate Averages
   let totalDwell = 0;
   let totalFlight = 0;
   let validFlights = 0; // We skip the first keystroke since flight time is always 0
@@ -32,5 +24,5 @@ export const calculateMetrics = (
   const avgDwell = Math.round(totalDwell / logs.length);
   const avgFlight = validFlights > 0 ? Math.round(totalFlight / validFlights) : 0;
 
-  return { wpm, avgDwell, avgFlight };
+  return { avgDwell, avgFlight };
 };
