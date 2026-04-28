@@ -9,6 +9,9 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "https://qaaed-keystroke-api.hf.space";
+
 export default function Home() {
   const router = useRouter();
   const { logs, clearLogs, recordKeyDown, recordKeyUp } = useTelemetry();
@@ -16,6 +19,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [wpm, setWpm] = useState(0);
+  const [accuracy, setAccuracy] = useState(100);
   const [isTestComplete, setIsTestComplete] = useState(false);
 
   useEffect(() => {
@@ -39,7 +43,7 @@ export default function Home() {
     setIsSending(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("https://qaaed-keystroke-api.hf.space/telemetry/", {
+      const response = await fetch(`${API_URL}/telemetry/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,7 +52,7 @@ export default function Home() {
         body: JSON.stringify({
           hardware_profile: "GMMK Modular 60%", 
           wpm,
-          accuracy: 100, 
+          accuracy,
           keystroke_data: logs.map((log) => ({
             key: log.key,
             code: log.code,
@@ -178,6 +182,7 @@ export default function Home() {
               onTelemetryKeyUp={recordKeyUp}
               onFinishedChange={setIsTestComplete}
               onWpmChange={setWpm}
+              onAccuracyChange={setAccuracy}
             />
           </div>
 
