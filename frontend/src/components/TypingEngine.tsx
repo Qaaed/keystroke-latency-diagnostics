@@ -24,6 +24,9 @@ type TestResult = {
 
 const TIME_OPTIONS = [15, 30, 60, 120];
 const WORD_COUNT_OPTIONS = [10, 25, 50, 100];
+const TIMED_TEXT_BUFFER_CHARS = 220;
+const VISIBLE_TEXT_BEFORE_CURSOR = 90;
+const VISIBLE_TEXT_AFTER_CURSOR = 520;
 
 const WORD_LIST = [
   "the",
@@ -120,6 +123,13 @@ const generateCode = () => {
   return CODE_SNIPPETS[Math.floor(Math.random() * CODE_SNIPPETS.length)];
 };
 
+const appendGeneratedText = (currentText: string, mode: TypingMode) => {
+  const nextText = mode === "code" ? generateCode() : generateWords(45);
+  const separator = mode === "code" ? "\n" : " ";
+
+  return currentText ? `${currentText}${separator}${nextText}` : nextText;
+};
+
 export default function TypingEngine({
   logs,
   onReset,
@@ -148,9 +158,28 @@ export default function TypingEngine({
   }, []);
 
   const buildTargetText = (nextMode = mode, nextWordCount = wordCount) => {
-    if (nextMode === "code") return generateCode();
+    if (nextMode === "code") {
+      return Array.from({ length: 4 }, () => generateCode()).join("\n");
+    }
     return generateWords(nextMode === "words" ? nextWordCount : 45);
   };
+
+  const extendTargetTextIfNeeded = useCallback(
+    (inputLength: number) => {
+      if (mode === "words") return;
+
+      setTargetText((currentText) => {
+        let nextText = currentText;
+
+        while (nextText.length - inputLength < TIMED_TEXT_BUFFER_CHARS) {
+          nextText = appendGeneratedText(nextText, mode);
+        }
+
+        return nextText;
+      });
+    },
+    [mode],
+  );
 
   const resetTest = (
     nextMode = mode,
@@ -220,6 +249,19 @@ export default function TypingEngine({
       elapsedSeconds,
     });
   }, [duration, isFinished, targetText, timeLeft, userInput]);
+
+  const visibleTextWindow = useMemo(() => {
+    const start = Math.max(0, userInput.length - VISIBLE_TEXT_BEFORE_CURSOR);
+    const end = Math.min(
+      targetText.length,
+      userInput.length + VISIBLE_TEXT_AFTER_CURSOR,
+    );
+
+    return {
+      start,
+      text: targetText.slice(start, end),
+    };
+  }, [targetText, userInput.length]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -306,8 +348,9 @@ export default function TypingEngine({
 
     const nextInput = e.target.value;
     setUserInput(nextInput);
+    extendTargetTextIfNeeded(nextInput.length);
 
-    if (nextInput.length >= targetText.length) {
+    if (mode === "words" && nextInput.length >= targetText.length) {
       pendingFinishInputRef.current = nextInput;
     }
   };
@@ -468,21 +511,22 @@ export default function TypingEngine({
             </div>
 
             <div className="max-h-[52vh] select-none overflow-hidden break-words font-mono text-[clamp(1.35rem,3.2vw,2.75rem)] leading-relaxed text-left sm:max-h-[56vh]">
-              {targetText.split("").map((char, index) => {
+              {visibleTextWindow.text.split("").map((char, index) => {
+                const absoluteIndex = visibleTextWindow.start + index;
                 let colorClass = "text-slate-600";
 
-                if (index < userInput.length) {
+                if (absoluteIndex < userInput.length) {
                   colorClass =
-                    userInput[index] === char
+                    userInput[absoluteIndex] === char
                       ? "text-slate-200"
                       : "rounded-sm bg-zinc-100 text-zinc-950";
                 }
 
-                const isCursor = index === userInput.length;
+                const isCursor = absoluteIndex === userInput.length;
 
                 return (
                   <span
-                    key={index}
+                    key={absoluteIndex}
                     className={`${colorClass} ${
                       isCursor ? "-ml-[2px] border-l-2 border-zinc-100" : ""
                     }`}
