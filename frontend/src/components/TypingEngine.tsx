@@ -14,6 +14,7 @@ type TypingEngineProps = {
   onTelemetryKeyUp: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onFinishedChange?: (isFinished: boolean) => void;
   onWpmChange?: (wpm: number) => void;
+  onAccuracyChange?: (accuracy: number) => void;
 };
 
 type TestResult = {
@@ -137,6 +138,7 @@ export default function TypingEngine({
   onTelemetryKeyUp,
   onFinishedChange,
   onWpmChange,
+  onAccuracyChange,
 }: TypingEngineProps) {
   const [mode, setMode] = useState<TypingMode>("time");
   const [duration, setDuration] = useState(15);
@@ -197,6 +199,7 @@ export default function TypingEngine({
     pendingFinishInputRef.current = null;
     onFinishedChange?.(false);
     onWpmChange?.(0);
+    onAccuracyChange?.(100);
     onReset();
     requestAnimationFrame(() => inputRef.current?.focus());
   };
@@ -218,7 +221,8 @@ export default function TypingEngine({
     if (!isFinished || !result) return;
     onFinishedChange?.(true);
     onWpmChange?.(result.wpm);
-  }, [isFinished, onFinishedChange, onWpmChange, result]);
+    onAccuracyChange?.(result.accuracy);
+  }, [isFinished, onAccuracyChange, onFinishedChange, onWpmChange, result]);
 
   const finishTest = useCallback((finalInput = userInput) => {
     if (isFinished) return;
