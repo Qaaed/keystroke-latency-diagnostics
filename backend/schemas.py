@@ -24,6 +24,7 @@ class TelemetryCreate(BaseModel):
 #This is what the Backend sends back to the Frontend (includes ID and Timestamp)
 class TelemetryResponse(TelemetryCreate):
     id: int
+    firebase_uid: str
     created_at: datetime
 
     class Config:
