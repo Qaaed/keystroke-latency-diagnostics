@@ -1,6 +1,7 @@
 "use client";
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LatencyChart from "@/components/LatencyChart";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
@@ -125,6 +126,13 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4">
+            <Link
+              href="/profile"
+              prefetch={false}
+              className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              Profile
+            </Link>
             <span className="hidden text-sm font-medium text-zinc-300 md:block">
               {user.displayName || "User"}
             </span>
