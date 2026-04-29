@@ -138,6 +138,19 @@ def get_all_telemetry(
     )
 
 
+@app.get("/telemetry/sessions", response_model=List[schemas.TelemetrySessionSummary])
+def get_my_telemetry_sessions(
+    db: Session = Depends(get_db),
+    firebase_uid: str = Depends(get_current_firebase_uid),
+):
+    return (
+        db.query(models.TelemetrySession)
+        .filter(models.TelemetrySession.firebase_uid == firebase_uid)
+        .order_by(models.TelemetrySession.created_at.desc())
+        .all()
+    )
+
+
 @app.get("/users/me/profile", response_model=schemas.UserProfileStats)
 def get_my_profile_stats(
     db: Session = Depends(get_db),

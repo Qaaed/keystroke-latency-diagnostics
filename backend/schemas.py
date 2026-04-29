@@ -31,6 +31,18 @@ class TelemetryResponse(TelemetryCreate):
         from_attributes = True # This tells Pydantic to work with SQLAlchemy models
 
 
+class TelemetrySessionSummary(BaseModel):
+    id: int
+    firebase_uid: str
+    hardware_profile: str
+    wpm: float
+    accuracy: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class UserProfileStats(BaseModel):
     firebase_uid: str
     total_sessions: int

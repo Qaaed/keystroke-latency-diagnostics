@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
@@ -33,7 +33,6 @@ type TelemetrySession = {
   wpm: number;
   accuracy: number;
   created_at: string;
-  keystroke_data: unknown[];
 };
 
 function formatNumber(value: number | null | undefined, suffix = "") {
@@ -95,7 +94,7 @@ export default function ProfilePage() {
         const [profileResponse, sessionsResponse, leaderboardResponse] =
           await Promise.all([
             fetch(`${API_URL}/users/me/profile`, { headers }),
-            fetch(`${API_URL}/telemetry/`, { headers }),
+            fetch(`${API_URL}/telemetry/sessions`, { headers }),
             fetch(`${API_URL}/leaderboard`, { headers }),
           ]);
 
@@ -135,41 +134,12 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] font-sans text-zinc-300 selection:bg-zinc-800">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-5 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between border-b border-zinc-800/70 pb-5">
-          <Link
-            href="/"
-            prefetch={false}
-            className="text-xs font-medium uppercase text-zinc-500"
-          >
-            Keystroke Latency Diagnostics
-          </Link>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              prefetch={false}
-              className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
-            >
-              Test
-            </Link>
-            <span className="hidden text-sm font-medium text-zinc-300 md:block">
-              {user?.displayName || "User"}
-            </span>
-            {user?.photoURL && (
-              <img
-                src={user.photoURL}
-                alt=""
-                className="h-8 w-8 rounded-full border border-zinc-700"
-              />
-            )}
-            <button
-              onClick={() => signOut(auth)}
-              className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
-            >
-              Sign Out
-            </button>
-          </div>
-        </nav>
+        <Navbar
+          user={user}
+          activePage="profile"
+          bordered
+          onSignOut={() => signOut(auth)}
+        />
 
         {error && (
           <div className="rounded-lg border border-red-950 bg-red-950/20 px-4 py-3 text-sm text-red-200">
