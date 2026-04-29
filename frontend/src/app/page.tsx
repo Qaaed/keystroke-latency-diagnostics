@@ -32,6 +32,7 @@ export default function Home() {
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
   const [isTestComplete, setIsTestComplete] = useState(false);
+  const [typingSessionKey, setTypingSessionKey] = useState(0);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
@@ -129,6 +130,28 @@ export default function Home() {
     clearLogs();
   };
 
+  const restartTypingSession = () => {
+    hasSavedSession.current = false;
+    setSaveStatus("idle");
+    setIsTestComplete(false);
+    setWpm(0);
+    setAccuracy(100);
+    clearLogs();
+    setTypingSessionKey((currentKey) => currentKey + 1);
+  };
+
+  const handleKeyboardChange = (value: string) => {
+    const shouldRestart = logs.length > 0;
+    setSelectedKeyboard(value);
+    if (shouldRestart) restartTypingSession();
+  };
+
+  const handleCustomKeyboardChange = (value: string) => {
+    const shouldRestart = logs.length > 0;
+    setCustomKeyboard(value);
+    if (shouldRestart) restartTypingSession();
+  };
+
   const handleFinishedChange = (isFinished: boolean) => {
     if (!isFinished) {
       hasSavedSession.current = false;
@@ -172,8 +195,8 @@ export default function Home() {
           showKeyboardSelector
           selectedKeyboard={selectedKeyboard}
           customKeyboard={customKeyboard}
-          onKeyboardChange={setSelectedKeyboard}
-          onCustomKeyboardChange={setCustomKeyboard}
+          onKeyboardChange={handleKeyboardChange}
+          onCustomKeyboardChange={handleCustomKeyboardChange}
           onSignOut={() => signOut(auth)}
         />
 
@@ -205,6 +228,7 @@ export default function Home() {
             )}
 
             <TypingEngine
+              key={typingSessionKey}
               logs={logs}
               onReset={handleReset}
               onTelemetryKeyDown={recordKeyDown}
