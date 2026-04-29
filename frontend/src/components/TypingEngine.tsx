@@ -361,7 +361,7 @@ export default function TypingEngine({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
       <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-2 rounded-lg bg-zinc-950/70 p-2 sm:flex-row sm:justify-center">
         <div className="flex flex-wrap justify-center gap-1.5">
-          {(["time", "words", "code"] as TypingMode[]).map((item) => (
+          {(["words", "code"] as TypingMode[]).map((item) => (
             <button
               key={item}
               onClick={() => handleModeChange(item)}
