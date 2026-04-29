@@ -287,8 +287,6 @@ export default function TypingEngine({
     return () => clearInterval(interval);
   }, [finishTest, isActive]);
 
-  const modeLabel = mode === "time" ? "time" : mode === "words" ? "words" : "code";
-
   const startTest = () => {
     if (isActive || isFinished) return;
     const now = performance.now();
@@ -502,9 +500,6 @@ export default function TypingEngine({
                 {timeLeft}s
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-400">
-                <span className="rounded border border-zinc-800 px-2 py-1 text-zinc-500">
-                  {modeLabel}
-                </span>
                 <button
                   onClick={() => resetTest()}
                   className="relative z-20 rounded border border-zinc-800 px-3 py-1 text-zinc-500 transition-colors hover:border-zinc-500 hover:text-white"
