@@ -12,6 +12,8 @@ class TelemetrySession(Base):
     id = Column(Integer, primary_key=True, index=True)
     firebase_uid = Column(String, index=True, nullable=False)
     hardware_profile = Column(String, index=True) # e.g., "GMMK - Tactile Browns"
+    mode = Column(String, index=True, nullable=True)
+    duration_seconds = Column(Integer, index=True, nullable=True)
     wpm = Column(Float)
     accuracy = Column(Float)
     

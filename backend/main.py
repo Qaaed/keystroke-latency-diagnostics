@@ -10,10 +10,33 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth, credentials
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 from sqlalchemy.orm import Session
 
 models.Base.metadata.create_all(bind=engine)
+
+
+def ensure_telemetry_session_columns():
+    inspector = inspect(engine)
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("telemetry_sessions")
+    }
+
+    columns_to_add = []
+    if "mode" not in existing_columns:
+        columns_to_add.append("ADD COLUMN mode VARCHAR")
+    if "duration_seconds" not in existing_columns:
+        columns_to_add.append("ADD COLUMN duration_seconds INTEGER")
+
+    if not columns_to_add:
+        return
+
+    with engine.begin() as connection:
+        for clause in columns_to_add:
+            connection.execute(text(f"ALTER TABLE telemetry_sessions {clause}"))
+
+
+ensure_telemetry_session_columns()
 
 app = FastAPI(title="Keystroke Latency Diagnostics API")
 
@@ -113,6 +136,8 @@ def create_telemetry(
     new_session = models.TelemetrySession(
         firebase_uid=firebase_uid,
         hardware_profile=payload.hardware_profile,
+        mode=payload.mode,
+        duration_seconds=payload.duration_seconds,
         wpm=payload.wpm,
         accuracy=payload.accuracy,
         keystroke_data=[k.dict() for k in payload.keystroke_data],
@@ -213,3 +238,100 @@ def get_leaderboard(
         )
 
     return leaderboard
+
+
+@app.get(
+    "/leaderboard/{target_firebase_uid}",
+    response_model=schemas.LeaderboardUserDetails,
+)
+def get_leaderboard_user_details(
+    target_firebase_uid: str,
+    db: Session = Depends(get_db),
+    firebase_uid: str = Depends(get_current_firebase_uid),
+):
+    stats = (
+        build_user_stats_query(db)
+        .filter(models.TelemetrySession.firebase_uid == target_firebase_uid)
+        .first()
+    )
+
+    if not stats:
+        raise HTTPException(status_code=404, detail="Leaderboard user not found")
+
+    ranked_rows = (
+        build_user_stats_query(db)
+        .order_by(
+            func.max(models.TelemetrySession.wpm).desc(),
+            func.max(models.TelemetrySession.accuracy).desc(),
+        )
+        .all()
+    )
+    rank = next(
+        (
+            index
+            for index, row in enumerate(ranked_rows, start=1)
+            if row.firebase_uid == target_firebase_uid
+        ),
+        0,
+    )
+    public_profile = get_public_user_profile(target_firebase_uid)
+
+    mode_rows = (
+        db.query(
+            models.TelemetrySession.mode.label("mode"),
+            models.TelemetrySession.duration_seconds.label("duration_seconds"),
+            func.count(models.TelemetrySession.id).label("total_sessions"),
+            func.max(models.TelemetrySession.wpm).label("best_wpm"),
+            func.avg(models.TelemetrySession.wpm).label("average_wpm"),
+            func.max(models.TelemetrySession.accuracy).label("best_accuracy"),
+            func.avg(models.TelemetrySession.accuracy).label("average_accuracy"),
+            func.max(models.TelemetrySession.created_at).label("latest_session_at"),
+        )
+        .filter(models.TelemetrySession.firebase_uid == target_firebase_uid)
+        .group_by(
+            models.TelemetrySession.mode,
+            models.TelemetrySession.duration_seconds,
+        )
+        .order_by(
+            models.TelemetrySession.mode.asc(),
+            models.TelemetrySession.duration_seconds.asc(),
+        )
+        .all()
+    )
+
+    recent_sessions = (
+        db.query(models.TelemetrySession)
+        .filter(models.TelemetrySession.firebase_uid == target_firebase_uid)
+        .order_by(models.TelemetrySession.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    return schemas.LeaderboardUserDetails(
+        user=schemas.LeaderboardEntry(
+            rank=rank,
+            firebase_uid=stats.firebase_uid,
+            total_sessions=stats.total_sessions,
+            best_wpm=stats.best_wpm,
+            average_wpm=stats.average_wpm,
+            best_accuracy=stats.best_accuracy,
+            average_accuracy=stats.average_accuracy,
+            latest_session_at=stats.latest_session_at,
+            display_name=public_profile["display_name"],
+            photo_url=public_profile["photo_url"],
+        ),
+        mode_stats=[
+            schemas.UserModeStats(
+                mode=row.mode,
+                duration_seconds=row.duration_seconds,
+                total_sessions=row.total_sessions,
+                best_wpm=row.best_wpm,
+                average_wpm=row.average_wpm,
+                best_accuracy=row.best_accuracy,
+                average_accuracy=row.average_accuracy,
+                latest_session_at=row.latest_session_at,
+            )
+            for row in mode_rows
+        ],
+        recent_sessions=recent_sessions,
+    )

@@ -50,10 +50,11 @@ export const KEYBOARD_OPTIONS = [
 ] as const;
 
 export const OTHER_KEYBOARD_VALUE = "__other__";
+export const KEYBOARD_PLACEHOLDER = "Not selected";
 
 type NavbarProps = {
   user: User | null;
-  activePage: "test" | "profile";
+  activePage: "test" | "profile" | "leaderboard";
   bordered?: boolean;
   showStatus?: boolean;
   showKeyboardSelector?: boolean;
@@ -70,7 +71,7 @@ export default function Navbar({
   bordered = false,
   showStatus = false,
   showKeyboardSelector = false,
-  selectedKeyboard = KEYBOARD_OPTIONS[0],
+  selectedKeyboard = "",
   customKeyboard = "",
   onKeyboardChange,
   onCustomKeyboardChange,
@@ -79,6 +80,18 @@ export default function Navbar({
   const [isKeyboardMenuOpen, setIsKeyboardMenuOpen] = useState(false);
   const [keyboardSearch, setKeyboardSearch] = useState("");
   const keyboardMenuRef = useRef<HTMLDivElement>(null);
+  const shouldShowKeyboardSelector =
+    activePage === "test" && showKeyboardSelector;
+  const keyboardLabel = selectedKeyboard
+    ? selectedKeyboard === OTHER_KEYBOARD_VALUE
+      ? customKeyboard || "Other keyboard"
+      : selectedKeyboard
+    : KEYBOARD_PLACEHOLDER;
+  const navItems = [
+    { href: "/", label: "Test", page: "test" },
+    { href: "/leaderboard", label: "Leaderboard", page: "leaderboard" },
+    { href: "/profile", label: "Profile", page: "profile" },
+  ] as const;
 
   const filteredKeyboardOptions = useMemo(() => {
     const normalizedSearch = keyboardSearch.trim().toLowerCase();
@@ -113,35 +126,87 @@ export default function Navbar({
 
   return (
     <nav
-      className={`flex flex-col gap-4 rounded-lg border border-zinc-700/70 bg-zinc-900 px-4 py-3 font-mono text-zinc-100 shadow-[0_1px_0_rgba(255,255,255,0.06)_inset] md:flex-row md:items-center md:justify-between ${
+      className={`rounded-lg border border-zinc-800 bg-zinc-950/95 font-mono text-zinc-100 shadow-[0_1px_0_rgba(255,255,255,0.06)_inset] ${
         bordered || showStatus ? "mb-1" : ""
       }`}
     >
-      <div>
-        <Link
-          href="/"
-          prefetch={false}
-          className="text-xs font-semibold uppercase text-zinc-200 transition-colors hover:text-white"
-        >
-          Keystroke Latency Diagnostics
-        </Link>
-        {showStatus && (
-          <div className="mt-2 flex items-center gap-3 text-sm">
-            <div className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-zinc-100 opacity-30" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-zinc-100" />
+      <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <Link
+            href="/"
+            prefetch={false}
+            className="block truncate text-xs font-semibold uppercase tracking-wide text-zinc-100 transition-colors hover:text-white"
+          >
+            Keystroke Latency Diagnostics
+          </Link>
+          {showStatus && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-30" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              <span>Database connected</span>
             </div>
-            <span className="text-zinc-400">Database connected</span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          <div className="flex rounded-md border border-zinc-800 bg-black/30 p-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.page}
+                href={item.href}
+                prefetch={false}
+                className={`rounded px-3 py-1.5 text-xs font-semibold uppercase transition-colors ${
+                  activePage === item.page
+                    ? "bg-zinc-100 text-zinc-950"
+                    : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-100"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
-        )}
+
+          <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-black/30 px-2 py-1">
+            <Link
+              href="/profile"
+              prefetch={false}
+              className="flex min-w-0 items-center gap-2 text-zinc-200 transition-colors hover:text-white"
+              aria-label="Open profile"
+            >
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt=""
+                  className="h-7 w-7 rounded-full border border-zinc-700"
+                />
+              ) : (
+                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-xs text-zinc-500">
+                  {(user?.displayName || user?.email || "U").slice(0, 1)}
+                </span>
+              )}
+              <span className="hidden max-w-36 truncate text-xs font-semibold md:block">
+                {user?.displayName || user?.email || "User"}
+              </span>
+            </Link>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="border-l border-zinc-800 pl-2 text-xs font-semibold uppercase text-zinc-500 transition-colors hover:text-white"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 md:justify-end">
-        {showKeyboardSelector && (
-          <div className="flex flex-wrap items-center gap-2">
+      {shouldShowKeyboardSelector && (
+        <div className="border-t border-zinc-800 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
             <label
               htmlFor="keyboard-search"
-              className="text-xs font-semibold uppercase text-zinc-400"
+              className="text-xs font-semibold uppercase text-zinc-500"
             >
               Keyboard
             </label>
@@ -149,14 +214,16 @@ export default function Navbar({
               <button
                 type="button"
                 onClick={() => setIsKeyboardMenuOpen((isOpen) => !isOpen)}
-                className="flex h-8 w-56 items-center justify-between gap-2 rounded-md border border-zinc-700 bg-zinc-950 px-2 font-mono text-xs font-medium text-zinc-100 outline-none transition-colors hover:border-zinc-500 focus:border-zinc-300"
+                className="flex h-8 w-60 items-center justify-between gap-2 rounded-md border border-zinc-700 bg-black px-2 font-mono text-xs font-medium text-zinc-100 outline-none transition-colors hover:border-zinc-500 focus:border-zinc-300"
                 aria-haspopup="listbox"
                 aria-expanded={isKeyboardMenuOpen}
               >
-                <span className="truncate">
-                  {selectedKeyboard === OTHER_KEYBOARD_VALUE
-                    ? customKeyboard || "Other keyboard"
-                    : selectedKeyboard}
+                <span
+                  className={`truncate ${
+                    selectedKeyboard ? "text-zinc-100" : "text-zinc-500"
+                  }`}
+                >
+                  {keyboardLabel}
                 </span>
                 <svg
                   aria-hidden="true"
@@ -245,60 +312,12 @@ export default function Navbar({
                   onCustomKeyboardChange?.(event.target.value)
                 }
                 placeholder="Add keyboard"
-                className="h-8 w-40 rounded-md border border-zinc-700 bg-zinc-950 px-2 font-mono text-xs font-medium text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 hover:border-zinc-500 focus:border-zinc-300"
+                className="h-8 w-44 rounded-md border border-zinc-700 bg-black px-2 font-mono text-xs font-medium text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 hover:border-zinc-500 focus:border-zinc-300"
               />
             )}
           </div>
-        )}
-
-        {activePage === "profile" && (
-          <Link
-            href="/"
-            prefetch={false}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950 text-zinc-400 transition-colors hover:border-zinc-500 hover:text-white"
-            aria-label="Back to typing test"
-            title="Back to typing test"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            >
-              <rect x="3" y="6" width="18" height="12" rx="2" />
-              <path d="M7 10h.01M11 10h.01M15 10h.01M19 10h.01M7 14h.01M11 14h6" />
-            </svg>
-          </Link>
-        )}
-
-        <Link
-          href="/profile"
-          prefetch={false}
-          className="flex items-center gap-2 text-zinc-200 transition-colors hover:text-white"
-          aria-label="Open profile"
-        >
-          <span className="hidden text-sm font-semibold md:block">
-            {user?.displayName || "User"}
-          </span>
-          {user?.photoURL && (
-            <img
-              src={user.photoURL}
-              alt=""
-              className="h-8 w-8 rounded-full border border-zinc-700"
-            />
-          )}
-        </Link>
-        <button
-          onClick={onSignOut}
-          className="text-xs font-semibold uppercase text-zinc-400 transition-colors hover:text-white"
-        >
-          Sign Out
-        </button>
-      </div>
+        </div>
+      )}
     </nav>
   );
 }

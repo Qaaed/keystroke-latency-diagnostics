@@ -17,6 +17,8 @@ class KeystrokeEntry(BaseModel):
 # This is what the Frontend will send to the Backend
 class TelemetryCreate(BaseModel):
     hardware_profile: str
+    mode: Optional[str] = None
+    duration_seconds: Optional[int] = None
     wpm: float
     accuracy: float
     keystroke_data: List[KeystrokeEntry] # A list of the objects above
@@ -35,6 +37,8 @@ class TelemetrySessionSummary(BaseModel):
     id: int
     firebase_uid: str
     hardware_profile: str
+    mode: Optional[str] = None
+    duration_seconds: Optional[int] = None
     wpm: float
     accuracy: float
     created_at: datetime
@@ -57,3 +61,20 @@ class LeaderboardEntry(UserProfileStats):
     rank: int
     display_name: Optional[str] = None
     photo_url: Optional[str] = None
+
+
+class UserModeStats(BaseModel):
+    mode: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    total_sessions: int
+    best_wpm: Optional[float] = None
+    average_wpm: Optional[float] = None
+    best_accuracy: Optional[float] = None
+    average_accuracy: Optional[float] = None
+    latest_session_at: Optional[datetime] = None
+
+
+class LeaderboardUserDetails(BaseModel):
+    user: LeaderboardEntry
+    mode_stats: List[UserModeStats]
+    recent_sessions: List[TelemetrySessionSummary]
