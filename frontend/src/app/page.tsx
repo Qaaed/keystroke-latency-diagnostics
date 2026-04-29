@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import LatencyChart from "@/components/LatencyChart";
 import Navbar, {
-  KEYBOARD_OPTIONS,
   OTHER_KEYBOARD_VALUE,
 } from "@/components/Navbar";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
@@ -33,11 +32,13 @@ export default function Home() {
   const [accuracy, setAccuracy] = useState(100);
   const [isTestComplete, setIsTestComplete] = useState(false);
   const [typingSessionKey, setTypingSessionKey] = useState(0);
+  const [sessionMode, setSessionMode] = useState<"words" | "code">("words");
+  const [sessionDurationSeconds, setSessionDurationSeconds] = useState(15);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
   const [selectedKeyboard, setSelectedKeyboard] = useState<string>(
-    () => getStoredValue("selectedKeyboard") ?? KEYBOARD_OPTIONS[0],
+    () => getStoredValue("selectedKeyboard") ?? "",
   );
   const [customKeyboard, setCustomKeyboard] = useState(
     () => getStoredValue("customKeyboard") ?? "",
@@ -46,7 +47,7 @@ export default function Home() {
   const hardwareProfile =
     selectedKeyboard === OTHER_KEYBOARD_VALUE
       ? customKeyboard.trim() || UNSPECIFIED_KEYBOARD
-      : selectedKeyboard;
+      : selectedKeyboard || UNSPECIFIED_KEYBOARD;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -61,7 +62,11 @@ export default function Home() {
   }, [router]);
 
   useEffect(() => {
-    window.localStorage.setItem("selectedKeyboard", selectedKeyboard);
+    if (selectedKeyboard) {
+      window.localStorage.setItem("selectedKeyboard", selectedKeyboard);
+    } else {
+      window.localStorage.removeItem("selectedKeyboard");
+    }
   }, [selectedKeyboard]);
 
   useEffect(() => {
@@ -84,6 +89,8 @@ export default function Home() {
         },
         body: JSON.stringify({
           hardware_profile: hardwareProfile,
+          mode: sessionMode,
+          duration_seconds: sessionDurationSeconds,
           wpm,
           accuracy,
           keystroke_data: logs.map((log) => ({
@@ -109,7 +116,15 @@ export default function Home() {
       setSaveStatus("error");
       return false;
     }
-  }, [accuracy, hardwareProfile, logs, user, wpm]);
+  }, [
+    accuracy,
+    hardwareProfile,
+    logs,
+    sessionDurationSeconds,
+    sessionMode,
+    user,
+    wpm,
+  ]);
 
   useEffect(() => {
     if (!isTestComplete || hasSavedSession.current || logs.length === 0) return;
@@ -160,6 +175,14 @@ export default function Home() {
 
     setIsTestComplete(isFinished);
   };
+
+  const handleSessionConfigChange = useCallback(
+    (config: { mode: "words" | "code"; durationSeconds: number }) => {
+      setSessionMode(config.mode);
+      setSessionDurationSeconds(config.durationSeconds);
+    },
+    [],
+  );
 
   if (isAuthLoading) {
     return (
@@ -236,6 +259,7 @@ export default function Home() {
               onFinishedChange={handleFinishedChange}
               onWpmChange={setWpm}
               onAccuracyChange={setAccuracy}
+              onSessionConfigChange={handleSessionConfigChange}
             />
           </div>
 

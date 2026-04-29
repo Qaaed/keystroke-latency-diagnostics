@@ -15,6 +15,10 @@ type TypingEngineProps = {
   onFinishedChange?: (isFinished: boolean) => void;
   onWpmChange?: (wpm: number) => void;
   onAccuracyChange?: (accuracy: number) => void;
+  onSessionConfigChange?: (config: {
+    mode: "words" | "code";
+    durationSeconds: number;
+  }) => void;
 };
 
 type TestResult = {
@@ -139,11 +143,12 @@ export default function TypingEngine({
   onFinishedChange,
   onWpmChange,
   onAccuracyChange,
+  onSessionConfigChange,
 }: TypingEngineProps) {
-  const [mode, setMode] = useState<TypingMode>("time");
+  const [mode, setMode] = useState<TypingMode>("words");
   const [duration, setDuration] = useState(15);
   const [wordCount, setWordCount] = useState(25);
-  const [targetText, setTargetText] = useState(() => generateWords(45));
+  const [targetText, setTargetText] = useState(() => generateWords(25));
   const [userInput, setUserInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(15);
   const [isActive, setIsActive] = useState(false);
@@ -158,6 +163,13 @@ export default function TypingEngine({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    onSessionConfigChange?.({
+      mode: mode === "code" ? "code" : "words",
+      durationSeconds: duration,
+    });
+  }, [duration, mode, onSessionConfigChange]);
 
   const buildTargetText = (nextMode = mode, nextWordCount = wordCount) => {
     if (nextMode === "code") {
