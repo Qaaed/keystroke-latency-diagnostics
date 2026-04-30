@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { apiFetch, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://qaaed-keystroke-api.hf.space";
 
 type LeaderboardEntry = {
   rank: number;
@@ -144,11 +142,11 @@ export default function LeaderboardPage() {
 
       try {
         const token = await user.getIdToken();
-        const response = await fetch(`${API_URL}/leaderboard`, {
+        const response = await apiFetch("/leaderboard", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!response.ok) throw new Error(await response.text());
+        await requireOk(response);
 
         const entries = (await response.json()) as LeaderboardEntry[];
         setLeaderboard(entries);
@@ -174,8 +172,8 @@ export default function LeaderboardPage() {
 
       try {
         const token = await user.getIdToken();
-        const response = await fetch(
-          `${API_URL}/leaderboard/${encodeURIComponent(selectedUid)}`,
+        const response = await apiFetch(
+          `/leaderboard/${encodeURIComponent(selectedUid)}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
 
@@ -185,7 +183,7 @@ export default function LeaderboardPage() {
           return;
         }
 
-        if (!response.ok) throw new Error(await response.text());
+        await requireOk(response);
 
         setDetails(await response.json());
       } catch (err) {

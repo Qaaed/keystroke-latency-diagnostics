@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { apiFetch, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://qaaed-keystroke-api.hf.space";
 
 type ProfileStats = {
   firebase_uid: string;
@@ -93,16 +91,14 @@ export default function ProfilePage() {
         const headers = { Authorization: `Bearer ${token}` };
         const [profileResponse, sessionsResponse, leaderboardResponse] =
           await Promise.all([
-            fetch(`${API_URL}/users/me/profile`, { headers }),
-            fetch(`${API_URL}/telemetry/sessions`, { headers }),
-            fetch(`${API_URL}/leaderboard`, { headers }),
+            apiFetch("/users/me/profile", { headers }),
+            apiFetch("/telemetry/sessions", { headers }),
+            apiFetch("/leaderboard", { headers }),
           ]);
 
-        if (!profileResponse.ok) throw new Error(await profileResponse.text());
-        if (!sessionsResponse.ok) throw new Error(await sessionsResponse.text());
-        if (!leaderboardResponse.ok) {
-          throw new Error(await leaderboardResponse.text());
-        }
+        await requireOk(profileResponse);
+        await requireOk(sessionsResponse);
+        await requireOk(leaderboardResponse);
 
         setProfile(await profileResponse.json());
         setSessions(await sessionsResponse.json());

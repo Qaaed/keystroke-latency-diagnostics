@@ -8,12 +8,10 @@ import Navbar, {
 } from "@/components/Navbar";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
 import TypingEngine from "@/components/TypingEngine";
+import { apiFetch, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://qaaed-keystroke-api.hf.space";
 
 const UNSPECIFIED_KEYBOARD = "keyboard not specified";
 
@@ -81,7 +79,7 @@ export default function Home() {
     setSaveStatus("saving");
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`${API_URL}/telemetry/`, {
+      const response = await apiFetch("/telemetry/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,7 +105,7 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) throw new Error(await response.text());
+      await requireOk(response);
 
       setSaveStatus("saved");
       return true;
