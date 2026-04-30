@@ -179,6 +179,7 @@ export default function Navbar({
                 <img
                   src={user.photoURL}
                   alt=""
+                  referrerPolicy="no-referrer"
                   className="h-7 w-7 rounded-full border border-zinc-700"
                 />
               ) : (
