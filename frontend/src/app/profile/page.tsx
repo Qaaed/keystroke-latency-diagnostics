@@ -160,6 +160,7 @@ export default function ProfilePage() {
                   <img
                     src={user.photoURL}
                     alt=""
+                    referrerPolicy="no-referrer"
                     className="h-14 w-14 rounded-full border border-zinc-700"
                   />
                 ) : (
@@ -304,6 +305,7 @@ export default function ProfilePage() {
                         <img
                           src={entry.photo_url}
                           alt=""
+                          referrerPolicy="no-referrer"
                           className="h-8 w-8 rounded-full border border-zinc-700"
                         />
                       ) : (

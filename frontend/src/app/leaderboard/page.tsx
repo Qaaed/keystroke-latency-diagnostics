@@ -113,11 +113,21 @@ function Avatar({
 
   return (
     <div
-      className={`${sizeClass} flex flex-none items-center justify-center rounded-full border border-zinc-700 bg-zinc-950 bg-cover bg-center font-medium text-zinc-400`}
-      style={entry.photo_url ? { backgroundImage: `url(${entry.photo_url})` } : undefined}
+      className={`${sizeClass} relative flex flex-none items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-950 font-medium text-zinc-400`}
       aria-hidden="true"
     >
-      {!entry.photo_url && name.slice(0, 1)}
+      {name.slice(0, 1)}
+      {entry.photo_url && (
+        <img
+          src={entry.photo_url}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
     </div>
   );
 }
