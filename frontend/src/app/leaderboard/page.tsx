@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import KeyPerformancePanel from "@/components/KeyPerformancePanel";
 import Navbar from "@/components/Navbar";
 import { apiFetch, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
@@ -40,6 +41,12 @@ type TelemetrySession = {
   duration_seconds: number | null;
   wpm: number;
   accuracy: number;
+  keystroke_data?: {
+    key: string;
+    dwell_time: number;
+    flight_time: number;
+    is_correct: boolean | null;
+  }[];
   created_at: string;
 };
 
@@ -52,6 +59,14 @@ type LeaderboardDetails = {
 function formatNumber(value: number | null | undefined, suffix = "") {
   if (value === null || value === undefined) return "-";
   return `${Math.round(value)}${suffix}`;
+}
+
+function formatRankDelta(entry: LeaderboardEntry, selected: LeaderboardEntry | null) {
+  if (!selected || entry.firebase_uid === selected.firebase_uid) return "";
+  const delta = entry.rank - selected.rank;
+  if (delta === 1) return "next rank";
+  if (delta === -1) return "previous rank";
+  return `${Math.abs(delta)} ranks ${delta > 0 ? "behind" : "ahead"}`;
 }
 
 function formatDate(value: string | null | undefined) {
@@ -149,8 +164,18 @@ export default function LeaderboardPage() {
         await requireOk(response);
 
         const entries = (await response.json()) as LeaderboardEntry[];
+        const requestedUid =
+          typeof window === "undefined"
+            ? null
+            : new URLSearchParams(window.location.search).get("user");
         setLeaderboard(entries);
-        setSelectedUid((currentUid) => currentUid ?? entries[0]?.firebase_uid ?? null);
+        setSelectedUid(
+          (currentUid) =>
+            currentUid ??
+            entries.find((entry) => entry.firebase_uid === requestedUid)?.firebase_uid ??
+            entries[0]?.firebase_uid ??
+            null,
+        );
       } catch (err) {
         console.error("Leaderboard load failed:", err);
         setError("Could not load leaderboard.");
@@ -201,6 +226,12 @@ export default function LeaderboardPage() {
     () => leaderboard.find((entry) => entry.firebase_uid === selectedUid) ?? null,
     [leaderboard, selectedUid],
   );
+  const adjacentRanks = useMemo(() => {
+    if (!selectedEntry) return [];
+    return leaderboard.filter(
+      (entry) => Math.abs(entry.rank - selectedEntry.rank) <= 1,
+    );
+  }, [leaderboard, selectedEntry]);
 
   if (isAuthLoading) {
     return (
@@ -266,6 +297,10 @@ export default function LeaderboardPage() {
                         setDetails(null);
                         setAreDetailsUnavailable(false);
                         setSelectedUid(entry.firebase_uid);
+                        router.replace(
+                          `/leaderboard?user=${encodeURIComponent(entry.firebase_uid)}`,
+                          { scroll: false },
+                        );
                       }}
                       className={`grid w-full grid-cols-[32px_1fr_auto] items-center gap-3 px-5 py-4 text-left transition-colors ${
                         isSelected
@@ -303,7 +338,8 @@ export default function LeaderboardPage() {
           <div className="space-y-5">
             <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-5">
               {selectedEntry ? (
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 items-center gap-4">
                     <Avatar entry={selectedEntry} user={user} size="lg" />
                     <div className="min-w-0">
@@ -338,10 +374,124 @@ export default function LeaderboardPage() {
                       </p>
                     </div>
                   </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
+                      <p className="text-xs uppercase text-zinc-500">Rank</p>
+                      <p className="mt-2 text-xl font-semibold text-zinc-100">
+                        #{selectedEntry.rank}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
+                      <p className="text-xs uppercase text-zinc-500">Sessions</p>
+                      <p className="mt-2 text-xl font-semibold text-zinc-100">
+                        {selectedEntry.total_sessions}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
+                      <p className="text-xs uppercase text-zinc-500">Avg WPM</p>
+                      <p className="mt-2 text-xl font-semibold text-zinc-100">
+                        {formatNumber(selectedEntry.average_wpm)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
+                      <p className="text-xs uppercase text-zinc-500">
+                        Avg Accuracy
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-zinc-100">
+                        {formatNumber(selectedEntry.average_accuracy, "%")}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-zinc-500">Select a ranked user.</p>
               )}
+            </section>
+
+            <section className="rounded-lg border border-zinc-800 bg-zinc-900/40">
+              <div className="border-b border-zinc-800 px-5 py-4">
+                <h2 className="text-xs font-medium uppercase text-zinc-500">
+                  Ranking Context
+                </h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Neighboring ranks around the selected profile.
+                </p>
+              </div>
+
+              <div className="divide-y divide-zinc-800">
+                {isLoading ? (
+                  <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
+                ) : adjacentRanks.length === 0 ? (
+                  <p className="px-5 py-6 text-sm text-zinc-500">
+                    No ranking context available.
+                  </p>
+                ) : (
+                  adjacentRanks.map((entry) => {
+                    const isSelected = entry.firebase_uid === selectedUid;
+
+                    return (
+                      <button
+                        key={entry.firebase_uid}
+                        type="button"
+                        onClick={() => {
+                          setDetails(null);
+                          setAreDetailsUnavailable(false);
+                          setSelectedUid(entry.firebase_uid);
+                          router.replace(
+                            `/leaderboard?user=${encodeURIComponent(entry.firebase_uid)}`,
+                            { scroll: false },
+                          );
+                        }}
+                        className={`grid w-full gap-3 px-5 py-4 text-left transition-colors sm:grid-cols-[72px_1fr_auto_auto] sm:items-center ${
+                          isSelected ? "bg-zinc-800/60" : "hover:bg-zinc-900/80"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-zinc-100">
+                          #{entry.rank}
+                        </p>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Avatar entry={entry} user={user} size="sm" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-zinc-200">
+                              {displayUserName(entry, user)}
+                            </p>
+                            <p className="text-xs text-zinc-500">
+                              {isSelected ? "Selected" : formatRankDelta(entry, selectedEntry)}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-zinc-400">
+                          Best {formatNumber(entry.best_wpm)} WPM
+                        </p>
+                        <p className="text-sm text-zinc-400">
+                          Avg {formatNumber(entry.average_accuracy, "%")} accuracy
+                        </p>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-zinc-800 bg-zinc-900/40">
+              <div className="border-b border-zinc-800 px-5 py-4">
+                <h2 className="text-xs font-medium uppercase text-zinc-500">
+                  Key Performance
+                </h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Recent saved keystrokes grouped by dwell time and accuracy.
+                </p>
+              </div>
+
+              <div className="p-5">
+                <KeyPerformancePanel
+                  sessions={details?.recent_sessions ?? []}
+                  isLoading={isDetailsLoading}
+                  emptyText="No per-key telemetry is available for this ranked user yet."
+                />
+              </div>
             </section>
 
             <section className="rounded-lg border border-zinc-800 bg-zinc-900/40">

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import KeyPerformancePanel from "@/components/KeyPerformancePanel";
 import Navbar from "@/components/Navbar";
 import { apiFetch, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
@@ -24,17 +25,25 @@ type LeaderboardEntry = ProfileStats & {
   photo_url: string | null;
 };
 
+type KeystrokeEntry = {
+  key: string;
+  dwell_time: number;
+  flight_time: number;
+  is_correct: boolean | null;
+};
+
 type TelemetrySession = {
   id: number;
   firebase_uid: string;
   hardware_profile: string;
   wpm: number;
   accuracy: number;
+  keystroke_data?: KeystrokeEntry[];
   created_at: string;
 };
 
 function formatNumber(value: number | null | undefined, suffix = "") {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "-";
   return `${Math.round(value)}${suffix}`;
 }
 
@@ -92,7 +101,7 @@ export default function ProfilePage() {
         const [profileResponse, sessionsResponse, leaderboardResponse] =
           await Promise.all([
             apiFetch("/users/me/profile", { headers }),
-            apiFetch("/telemetry/sessions", { headers }),
+            apiFetch("/telemetry/", { headers }),
             apiFetch("/leaderboard", { headers }),
           ]);
 
@@ -167,7 +176,7 @@ export default function ProfilePage() {
                     {user?.email || "Signed in user"}
                   </p>
                   <p className="mt-3 text-xs uppercase text-zinc-600">
-                    Rank {currentRank ? `#${currentRank.rank}` : "—"}
+                    Rank {currentRank ? `#${currentRank.rank}` : "-"}
                   </p>
                 </div>
               </div>
@@ -199,6 +208,21 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
+
+            <section className="rounded-lg border border-zinc-800 bg-zinc-900/40">
+              <div className="border-b border-zinc-800 px-5 py-4">
+                <h2 className="text-xs font-medium uppercase text-zinc-500">
+                  Key Performance
+                </h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Saved keystrokes grouped by dwell time and accuracy.
+                </p>
+              </div>
+
+              <div className="p-5">
+                <KeyPerformancePanel sessions={sessions} isLoading={isLoading} />
+              </div>
+            </section>
 
             <section className="rounded-lg border border-zinc-800 bg-zinc-900/40">
               <div className="border-b border-zinc-800 px-5 py-4">
@@ -247,7 +271,7 @@ export default function ProfilePage() {
                 Leaderboard
               </h2>
               <p className="mt-1 text-sm text-zinc-400">
-                Ranked by best saved WPM
+                Open a ranked user inside the leaderboard view.
               </p>
             </div>
 
@@ -260,9 +284,15 @@ export default function ProfilePage() {
                 </p>
               ) : (
                 leaderboard.map((entry) => (
-                  <div
+                  <button
                     key={entry.firebase_uid}
-                    className={`grid grid-cols-[28px_1fr_auto] items-center gap-3 px-5 py-4 ${
+                    type="button"
+                    onClick={() =>
+                      router.push(
+                        `/leaderboard?user=${encodeURIComponent(entry.firebase_uid)}`,
+                      )
+                    }
+                    className={`grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-zinc-900/80 ${
                       entry.firebase_uid === user?.uid ? "bg-zinc-800/30" : ""
                     }`}
                   >
@@ -294,7 +324,7 @@ export default function ProfilePage() {
                       </p>
                       <p className="text-xs text-zinc-500">WPM</p>
                     </div>
-                  </div>
+                  </button>
                 ))
               )}
             </div>

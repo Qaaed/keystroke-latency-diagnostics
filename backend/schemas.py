@@ -77,4 +77,4 @@ class UserModeStats(BaseModel):
 class LeaderboardUserDetails(BaseModel):
     user: LeaderboardEntry
     mode_stats: List[UserModeStats]
-    recent_sessions: List[TelemetrySessionSummary]
+    recent_sessions: List[TelemetryResponse]
