@@ -27,8 +27,7 @@ type TestResult = {
   elapsedSeconds: number;
 };
 
-const TIME_OPTIONS = [15, 30, 60, 120];
-const WORD_COUNT_OPTIONS = [10, 25, 50, 100];
+const TIME_OPTIONS = [15, 30, 45, 60, 120];
 const TIMED_TEXT_BUFFER_CHARS = 220;
 const VISIBLE_TEXT_BEFORE_CURSOR = 90;
 const VISIBLE_TEXT_AFTER_CURSOR = 520;
@@ -147,8 +146,7 @@ export default function TypingEngine({
 }: TypingEngineProps) {
   const [mode, setMode] = useState<TypingMode>("words");
   const [duration, setDuration] = useState(15);
-  const [wordCount, setWordCount] = useState(25);
-  const [targetText, setTargetText] = useState(() => generateWords(25));
+  const [targetText, setTargetText] = useState(() => generateWords(45));
   const [userInput, setUserInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(15);
   const [isActive, setIsActive] = useState(false);
@@ -171,17 +169,15 @@ export default function TypingEngine({
     });
   }, [duration, mode, onSessionConfigChange]);
 
-  const buildTargetText = (nextMode = mode, nextWordCount = wordCount) => {
+  const buildTargetText = (nextMode = mode) => {
     if (nextMode === "code") {
       return Array.from({ length: 4 }, () => generateCode()).join("\n");
     }
-    return generateWords(nextMode === "words" ? nextWordCount : 45);
+    return generateWords(45);
   };
 
   const extendTargetTextIfNeeded = useCallback(
     (inputLength: number) => {
-      if (mode === "words") return;
-
       setTargetText((currentText) => {
         let nextText = currentText;
 
@@ -198,14 +194,13 @@ export default function TypingEngine({
   const resetTest = (
     nextMode = mode,
     nextDuration = duration,
-    nextWordCount = wordCount,
   ) => {
     setIsActive(false);
     setIsFinished(false);
     setResult(null);
     setTimeLeft(nextDuration);
     setUserInput("");
-    setTargetText(buildTargetText(nextMode, nextWordCount));
+    setTargetText(buildTargetText(nextMode));
     startedAtRef.current = null;
     endsAtRef.current = null;
     pendingFinishInputRef.current = null;
@@ -311,17 +306,12 @@ export default function TypingEngine({
 
   const handleModeChange = (nextMode: TypingMode) => {
     setMode(nextMode);
-    resetTest(nextMode, duration, wordCount);
+    resetTest(nextMode, duration);
   };
 
   const handleDurationChange = (nextDuration: number) => {
     setDuration(nextDuration);
-    resetTest(mode, nextDuration, wordCount);
-  };
-
-  const handleWordCountChange = (nextWordCount: number) => {
-    setWordCount(nextWordCount);
-    resetTest(mode, duration, nextWordCount);
+    resetTest(mode, nextDuration);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -364,9 +354,6 @@ export default function TypingEngine({
     setUserInput(nextInput);
     extendTargetTextIfNeeded(nextInput.length);
 
-    if (mode === "words" && nextInput.length >= targetText.length) {
-      pendingFinishInputRef.current = nextInput;
-    }
   };
 
   return (
@@ -390,22 +377,7 @@ export default function TypingEngine({
         </div>
 
         <div className="flex flex-wrap justify-center gap-1.5">
-          {mode === "words"
-            ? WORD_COUNT_OPTIONS.map((count) => (
-                <button
-                  key={count}
-                  onClick={() => handleWordCountChange(count)}
-                  disabled={isActive}
-                  className={`h-9 rounded-md px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                    wordCount === count
-                      ? "bg-zinc-100 text-zinc-900"
-                      : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-100"
-                  }`}
-                >
-                  {count}
-                </button>
-              ))
-            : TIME_OPTIONS.map((seconds) => (
+          {TIME_OPTIONS.map((seconds) => (
                 <button
                   key={seconds}
                   onClick={() => handleDurationChange(seconds)}
