@@ -15,6 +15,11 @@ import type { User } from "firebase/auth";
 
 const UNSPECIFIED_KEYBOARD = "keyboard not specified";
 
+type SessionConfig = {
+  mode: "words" | "code";
+  durationSeconds: number;
+};
+
 function getStoredValue(key: string) {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(key);
@@ -30,8 +35,10 @@ export default function Home() {
   const [accuracy, setAccuracy] = useState(100);
   const [isTestComplete, setIsTestComplete] = useState(false);
   const [typingSessionKey, setTypingSessionKey] = useState(0);
-  const [sessionMode, setSessionMode] = useState<"words" | "code">("words");
-  const [sessionDurationSeconds, setSessionDurationSeconds] = useState(15);
+  const sessionConfigRef = useRef<SessionConfig>({
+    mode: "words",
+    durationSeconds: 15,
+  });
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
@@ -79,6 +86,7 @@ export default function Home() {
     setSaveStatus("saving");
     try {
       const token = await user.getIdToken();
+      const sessionConfig = sessionConfigRef.current;
       const response = await apiFetch("/telemetry/", {
         method: "POST",
         headers: {
@@ -87,8 +95,8 @@ export default function Home() {
         },
         body: JSON.stringify({
           hardware_profile: hardwareProfile,
-          mode: sessionMode,
-          duration_seconds: sessionDurationSeconds,
+          mode: sessionConfig.mode,
+          duration_seconds: sessionConfig.durationSeconds,
           wpm,
           accuracy,
           keystroke_data: logs.map((log) => ({
@@ -118,8 +126,6 @@ export default function Home() {
     accuracy,
     hardwareProfile,
     logs,
-    sessionDurationSeconds,
-    sessionMode,
     user,
     wpm,
   ]);
@@ -175,9 +181,8 @@ export default function Home() {
   };
 
   const handleSessionConfigChange = useCallback(
-    (config: { mode: "words" | "code"; durationSeconds: number }) => {
-      setSessionMode(config.mode);
-      setSessionDurationSeconds(config.durationSeconds);
+    (config: SessionConfig) => {
+      sessionConfigRef.current = config;
     },
     [],
   );

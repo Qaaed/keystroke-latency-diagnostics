@@ -22,23 +22,10 @@ type LeaderboardEntry = {
   photo_url: string | null;
 };
 
-type ModeStats = {
-  mode: string | null;
-  duration_seconds: number | null;
-  total_sessions: number;
-  best_wpm: number | null;
-  average_wpm: number | null;
-  best_accuracy: number | null;
-  average_accuracy: number | null;
-  latest_session_at: string | null;
-};
-
 type TelemetrySession = {
   id: number;
   firebase_uid: string;
   hardware_profile: string;
-  mode: string | null;
-  duration_seconds: number | null;
   wpm: number;
   accuracy: number;
   keystroke_data?: {
@@ -52,7 +39,6 @@ type TelemetrySession = {
 
 type LeaderboardDetails = {
   user: LeaderboardEntry;
-  mode_stats: ModeStats[];
   recent_sessions: TelemetrySession[];
 };
 
@@ -78,24 +64,12 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-function formatDuration(seconds: number | null | undefined) {
-  if (!seconds) return "unspecified";
-  if (seconds % 60 === 0) return `${seconds / 60} min`;
-  return `${seconds}s`;
-}
-
 function displayUserName(entry: LeaderboardEntry, currentUser: User | null) {
   if (entry.firebase_uid === currentUser?.uid) {
     return currentUser.displayName || entry.display_name || "You";
   }
 
   return entry.display_name || `User ${entry.firebase_uid.slice(0, 6)}`;
-}
-
-function displayMode(mode: string | null | undefined) {
-  if (mode === "code") return "Code";
-  if (mode === "words" || mode === "time") return "Words";
-  return "Unspecified";
 }
 
 function Avatar({
@@ -497,62 +471,6 @@ export default function LeaderboardPage() {
             <section className="rounded-lg border border-zinc-800 bg-zinc-900/40">
               <div className="border-b border-zinc-800 px-5 py-4">
                 <h2 className="text-xs font-medium uppercase text-zinc-500">
-                  Mode and Time Breakdown
-                </h2>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Best and average performance grouped by mode and test length.
-                </p>
-              </div>
-
-              <div className="divide-y divide-zinc-800">
-                {isDetailsLoading ? (
-                  <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
-                ) : areDetailsUnavailable ? (
-                  <p className="px-5 py-6 text-sm leading-6 text-zinc-500">
-                    Mode and time breakdown is not available from the current
-                    API yet. The ranking summary above is still available.
-                  </p>
-                ) : !details || details.mode_stats.length === 0 ? (
-                  <p className="px-5 py-6 text-sm text-zinc-500">
-                    No mode-specific stats are available yet.
-                  </p>
-                ) : (
-                  details.mode_stats.map((stat) => (
-                    <div
-                      key={`${stat.mode ?? "unknown"}-${stat.duration_seconds ?? "none"}`}
-                      className="grid gap-3 px-5 py-4 md:grid-cols-[1fr_repeat(4,auto)] md:items-center"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-zinc-200">
-                          {displayMode(stat.mode)} ·{" "}
-                          {formatDuration(stat.duration_seconds)}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          {stat.total_sessions} sessions · latest{" "}
-                          {formatDate(stat.latest_session_at)}
-                        </p>
-                      </div>
-                      <p className="text-sm text-zinc-400">
-                        Best {formatNumber(stat.best_wpm)} WPM
-                      </p>
-                      <p className="text-sm text-zinc-400">
-                        Avg {formatNumber(stat.average_wpm)} WPM
-                      </p>
-                      <p className="text-sm text-zinc-400">
-                        Best {formatNumber(stat.best_accuracy, "%")}
-                      </p>
-                      <p className="text-sm text-zinc-400">
-                        Avg {formatNumber(stat.average_accuracy, "%")}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-
-            <section className="rounded-lg border border-zinc-800 bg-zinc-900/40">
-              <div className="border-b border-zinc-800 px-5 py-4">
-                <h2 className="text-xs font-medium uppercase text-zinc-500">
                   Recent Ranked Sessions
                 </h2>
               </div>
@@ -580,8 +498,6 @@ export default function LeaderboardPage() {
                           {session.hardware_profile}
                         </p>
                         <p className="mt-1 text-xs text-zinc-500">
-                          {displayMode(session.mode)} ·{" "}
-                          {formatDuration(session.duration_seconds)} ·{" "}
                           {formatDate(session.created_at)}
                         </p>
                       </div>
