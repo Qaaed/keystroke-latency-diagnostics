@@ -110,6 +110,7 @@ const SHIFTED_KEY_ALIASES: Record<string, string> = {
 
 const VALID_KEYS = new Set(KEYBOARD_ROWS.flat().map((key) => key.id));
 const NEUTRAL_PERFORMANCE_KEYS = new Set(["Backspace"]);
+const SUMMARY_EXCLUDED_KEYS = new Set(["Backspace"]);
 
 function normalizeKey(key: string) {
   if (key === " ") return "Space";
@@ -187,7 +188,8 @@ function buildKeyInsights(sessions: KeyedTelemetrySession[]) {
     }),
   );
   const eligibleSummaries = Object.values(summaries).filter(
-    (summary) => summary.count >= 2,
+    (summary) =>
+      summary.count >= 2 && !SUMMARY_EXCLUDED_KEYS.has(summary.key),
   );
   const slowestKey = [...eligibleSummaries].sort(
     (a, b) => b.averageDwell - a.averageDwell,
