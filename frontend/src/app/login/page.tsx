@@ -49,9 +49,18 @@ export default function LoginPage() {
             Keynostics
           </h1>
           <p className="text-sm leading-6 text-zinc-500">
-            Measure typing speed, accuracy, key dwell time, and key-to-key
-            latency to understand how your keyboard responds while you type.
-            Compare results on the leaderboard and compete with other typers.
+            Measure typing speed, accuracy, and key latency, then compete on
+            the leaderboard.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-yellow-200">
+            Use a computer for accurate scores
+          </p>
+          <p className="mt-1 text-xs leading-5 text-yellow-100/70">
+            Mobile keyboards can distort latency measurements and typing
+            results.
           </p>
         </div>
         
