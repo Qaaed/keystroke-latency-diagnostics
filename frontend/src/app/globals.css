@@ -25,48 +25,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.mobile-device-notice {
-  display: none;
-}
-
-.desktop-app-shell {
-  min-height: 100%;
-}
-
-@media (max-width: 767px) {
-  .desktop-app-shell {
-    display: none;
-  }
-
-  .mobile-device-notice {
-    display: flex;
-    min-height: 100vh;
-    align-items: center;
-    justify-content: center;
-    background: #0a0a0a;
-    padding: 1.5rem;
-    color: #e4e4e7;
-    text-align: center;
-  }
-
-  .mobile-device-notice > div {
-    max-width: 22rem;
-  }
-
-  .mobile-device-notice h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    letter-spacing: 0;
-  }
-
-  .mobile-device-notice p {
-    margin-top: 0.75rem;
-    color: #71717a;
-    font-size: 0.95rem;
-    line-height: 1.6;
-  }
-}
-
 .no-code-ligatures {
   font-variant-ligatures: none;
   font-feature-settings:
