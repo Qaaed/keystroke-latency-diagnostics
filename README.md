@@ -43,32 +43,40 @@ Keynostics captures browser keyboard events during a typing test.
 8. Profile and leaderboard pages aggregate saved sessions to show long-term performance.
 
 ## Tech Stack
-
+ 
 ### Frontend
-
-- Next.js 16.2.4 with App Router
-- React 19.2.4
-- TypeScript 5
-- Tailwind CSS 4
-- Firebase Web SDK for authentication
-- Recharts for charts and latency visualization
-- ESLint with Next.js configuration
-
+ 
+| Technology | Version | Purpose |
+|---|---|---|
+| Next.js | 16.2.4 | React framework with App Router |
+| React | 19.2.4 | UI library |
+| TypeScript | 5 | Type safety |
+| Tailwind CSS | 4 | Utility-first styling |
+| Firebase Web SDK | — | Authentication |
+| Recharts | — | Charts and latency visualization |
+| ESLint | — | Code linting with Next.js config |
+ 
 ### Backend
-
-- FastAPI
-- Uvicorn ASGI server
-- SQLAlchemy
-- Pydantic
-- Firebase Admin SDK
-- python-dotenv for local environment loading
-- psycopg2 for PostgreSQL connectivity
-
+ 
+| Technology | Purpose |
+|---|---|
+| FastAPI | Web framework and routing |
+| Uvicorn | ASGI server |
+| SQLAlchemy | ORM and database abstraction |
+| Pydantic | Request/response validation |
+| Firebase Admin SDK | Server-side authentication verification |
+| python-dotenv | Environment variable loading |
+| psycopg2 | PostgreSQL driver |
+ 
 ### Database
+ 
+| Technology | Use Case |
+|---|---|
+| PostgreSQL | Production database |
+| SQLite | Local development alternative |
+| JSON/JSONB | Per-session keystroke telemetry storage |
+---
 
-- PostgreSQL in production
-- SQLite-compatible model support for local development
-- JSON/JSONB storage for per-session keystroke telemetry
 
 ## Project Structure
 
@@ -256,48 +264,33 @@ Each keystroke entry can include:
 - Correctness flag
 
 ## Deployments
-
-The project is structured for separate frontend and backend deployments.
-
+ 
 ### Frontend Deployment
-
-Typical target: Vercel or another Next.js hosting provider.
-
-Required production configuration:
-
-- `NEXT_PUBLIC_API_URL` pointing to the deployed backend URL
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-
-Build command:
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
+ 
+| Aspect | Details |
+|---|---|
+| **Target Platforms** | Vercel, Next.js hosting providers |
+| **Environment Variables** | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID` |
+| **Build Command** | `cd frontend && npm install && npm run build` |
+ 
 ### Backend Deployment
-
-Typical target: Docker-capable hosts such as Hugging Face Spaces, Render, Fly.io, Railway, or a VM.
-
-Required production configuration:
-
-- `DATABASE_URL` pointing to PostgreSQL
-- `FIREBASE_JSON` containing the Firebase service account JSON string
-
-The backend Dockerfile starts Uvicorn on port `7860`:
-
-```bash
-cd backend
-docker build -t keynostics-api .
-docker run -p 7860:7860 --env-file .env keynostics-api
-```
-
+ 
+| Aspect | Details |
+|---|---|
+| **Target Platforms** | Docker-capable hosts (Hugging Face Spaces, Render, Fly.io, Railway, VM) |
+| **Environment Variables** | `DATABASE_URL` (PostgreSQL), `FIREBASE_JSON` (service account JSON string) |
+| **Containerization** | Docker with Uvicorn on port 7860 |
+| **Build Command** | `cd backend && docker build -t keynostics-api . && docker run -p 7860:7860 --env-file .env keynostics-api` |
+ 
 ### Database Deployment
-
-Typical target: Neon, Supabase, Render PostgreSQL, Railway PostgreSQL, or another managed PostgreSQL provider.
+ 
+| Aspect | Details |
+|---|---|
+| **Target Platforms** | Neon, Supabase, Render PostgreSQL, Railway PostgreSQL, managed PostgreSQL providers |
+| **Setup** | Backend creates SQLAlchemy tables on startup |
+| **Data Storage** | JSON/JSONB-compatible columns for per-session telemetry |
+| **Migration** | Keep same connection string unless intentionally migrating data |
+ 
 
 The backend creates SQLAlchemy tables on startup and stores per-session telemetry in JSON/JSONB-compatible columns. Existing deployments should keep the same database connection string unless migrating data intentionally.
 
