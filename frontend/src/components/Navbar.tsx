@@ -137,7 +137,7 @@ export default function Navbar({
             prefetch={false}
             className="block truncate text-xs font-semibold uppercase tracking-wide text-zinc-100 transition-colors hover:text-white"
           >
-            Keystroke Latency Diagnostics
+            Keynostics
           </Link>
           {showStatus && (
             <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
@@ -204,7 +204,11 @@ export default function Navbar({
 
       {shouldShowKeyboardSelector && (
         <div className="border-t border-zinc-800 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-xl text-xs leading-5 text-zinc-500">
+              Track typing speed, accuracy, and key latency across your keyboard.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 md:justify-end">
             <label
               htmlFor="keyboard-search"
               className="text-xs font-semibold uppercase text-zinc-500"
@@ -316,6 +320,7 @@ export default function Navbar({
                 className="h-8 w-44 rounded-md border border-zinc-700 bg-black px-2 font-mono text-xs font-medium text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 hover:border-zinc-500 focus:border-zinc-300"
               />
             )}
+            </div>
           </div>
         </div>
       )}
