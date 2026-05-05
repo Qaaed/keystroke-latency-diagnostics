@@ -8,6 +8,16 @@ type ApiFetchOptions = RequestInit & {
   retryDelayMs?: number;
 };
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -53,6 +63,36 @@ export async function apiFetch(path: string, options: ApiFetchOptions = {}) {
 export async function requireOk(response: Response) {
   if (response.ok) return response;
 
-  const message = await response.text();
-  throw new Error(message || `API request failed with status ${response.status}`);
+  let message = "";
+
+  try {
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json")) {
+      const payload = await response.json();
+      if (typeof payload?.detail === "string") {
+        message = payload.detail;
+      } else if (Array.isArray(payload?.detail)) {
+        message = payload.detail
+          .map((item: { msg?: string }) => item.msg)
+          .filter(Boolean)
+          .join("; ");
+      } else {
+        message = JSON.stringify(payload);
+      }
+    } else {
+      message = await response.text();
+    }
+  } catch {
+    message = "";
+  }
+
+  throw new ApiError(
+    response.status,
+    message || `API request failed with status ${response.status}`,
+  );
+}
+
+export function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
 }

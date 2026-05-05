@@ -93,6 +93,7 @@ const SHIFTED_KEY_ALIASES: Record<string, string> = {
 };
 
 const VALID_KEYS = new Set(KEYBOARD_ROWS.flat().map((key) => key.id));
+const NEUTRAL_LATENCY_KEYS = new Set(["Backspace"]);
 
 function normalizeKey(key: string) {
   if (key === " ") return "Space";
@@ -136,6 +137,10 @@ export default function VirtualKeyboard({ logs }: { logs: TelemetryLog[] }) {
 
   // 2. Helper to get color based on latency (Green = Fast, Red = Slow)
   const getKeyColor = (key: string) => {
+    if (NEUTRAL_LATENCY_KEYS.has(key)) {
+      return "bg-zinc-800 text-zinc-400 border-zinc-700";
+    }
+
     const stat = keyStats.stats[key];
     if (!stat) return "bg-slate-800 text-slate-500 border-slate-800";
 

@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { calculateMetrics } from "@/lib/metrics";
 import type { TelemetryLog } from "@/types/telemetry";
 
@@ -29,9 +36,6 @@ type TestResult = {
 
 const TIME_OPTIONS = [15, 30, 45, 60, 120];
 const TIMED_TEXT_BUFFER_CHARS = 220;
-const VISIBLE_TEXT_BEFORE_CURSOR = 90;
-const VISIBLE_TEXT_AFTER_CURSOR = 520;
-
 const WORD_LIST = [
   "the",
   "be",
@@ -154,6 +158,8 @@ export default function TypingEngine({
   const [result, setResult] = useState<TestResult | null>(null);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textDisplayRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<HTMLSpanElement | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const endsAtRef = useRef<number | null>(null);
   const pendingFinishInputRef = useRef<string | null>(null);
@@ -261,17 +267,14 @@ export default function TypingEngine({
     });
   }, [duration, isFinished, targetText, timeLeft, userInput]);
 
-  const visibleTextWindow = useMemo(() => {
-    const start = Math.max(0, userInput.length - VISIBLE_TEXT_BEFORE_CURSOR);
-    const end = Math.min(
-      targetText.length,
-      userInput.length + VISIBLE_TEXT_AFTER_CURSOR,
-    );
+  useLayoutEffect(() => {
+    const display = textDisplayRef.current;
+    const cursor = cursorRef.current;
+    if (!display || !cursor) return;
 
-    return {
-      start,
-      text: targetText.slice(start, end),
-    };
+    const desiredCursorTop = display.clientHeight * 0.38;
+    const nextScrollTop = Math.max(0, cursor.offsetTop - desiredCursorTop);
+    display.scrollTop = nextScrollTop;
   }, [targetText, userInput.length]);
 
   useEffect(() => {
@@ -493,9 +496,11 @@ export default function TypingEngine({
               </div>
             </div>
 
-            <div className="max-h-[52vh] select-none overflow-hidden break-words font-mono text-[clamp(1.35rem,3.2vw,2.75rem)] leading-relaxed text-left sm:max-h-[56vh]">
-              {visibleTextWindow.text.split("").map((char, index) => {
-                const absoluteIndex = visibleTextWindow.start + index;
+            <div
+              ref={textDisplayRef}
+              className="no-code-ligatures max-h-[52vh] select-none overflow-y-auto break-words whitespace-pre-wrap font-mono text-[clamp(1.35rem,3.2vw,2.75rem)] leading-relaxed text-left sm:max-h-[56vh]"
+            >
+              {targetText.split("").map((char, absoluteIndex) => {
                 let colorClass = "text-slate-600";
 
                 if (absoluteIndex < userInput.length) {
@@ -510,6 +515,7 @@ export default function TypingEngine({
                 return (
                   <span
                     key={absoluteIndex}
+                    ref={isCursor ? cursorRef : null}
                     className={`${colorClass} ${
                       isCursor ? "-ml-[2px] border-l-2 border-zinc-100" : ""
                     }`}

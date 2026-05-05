@@ -109,6 +109,7 @@ const SHIFTED_KEY_ALIASES: Record<string, string> = {
 };
 
 const VALID_KEYS = new Set(KEYBOARD_ROWS.flat().map((key) => key.id));
+const NEUTRAL_PERFORMANCE_KEYS = new Set(["Backspace"]);
 
 function normalizeKey(key: string) {
   if (key === " ") return "Space";
@@ -209,6 +210,10 @@ function buildKeyInsights(sessions: KeyedTelemetrySession[]) {
 }
 
 function getKeyColor(summary: KeySummary | undefined) {
+  if (summary && NEUTRAL_PERFORMANCE_KEYS.has(summary.key)) {
+    return "bg-zinc-800 text-zinc-400 border-zinc-700";
+  }
+
   if (!summary) return "bg-slate-800 text-slate-500 border-slate-800";
 
   if (summary.level === "bad") {

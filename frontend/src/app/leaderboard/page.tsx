@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import KeyPerformancePanel from "@/components/KeyPerformancePanel";
 import Navbar from "@/components/Navbar";
-import { apiFetch, requireOk } from "@/lib/api";
+import { apiFetch, getErrorMessage, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
@@ -187,8 +187,9 @@ export default function LeaderboardPage() {
             null,
         );
       } catch (err) {
-        console.error("Leaderboard load failed:", err);
-        setError("Could not load leaderboard.");
+        const message = getErrorMessage(err, "Could not load leaderboard.");
+        console.warn(`Leaderboard load failed: ${message}`);
+        setError(message);
       } finally {
         setIsLoading(false);
       }
@@ -222,8 +223,12 @@ export default function LeaderboardPage() {
 
         setDetails(await response.json());
       } catch (err) {
-        console.error("Leaderboard details load failed:", err);
-        setError("Could not load the selected user's stats.");
+        const message = getErrorMessage(
+          err,
+          "Could not load the selected user's stats.",
+        );
+        console.warn(`Leaderboard details load failed: ${message}`);
+        setError(message);
       } finally {
         setIsDetailsLoading(false);
       }

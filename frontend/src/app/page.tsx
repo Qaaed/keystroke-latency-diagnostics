@@ -8,7 +8,7 @@ import Navbar, {
 } from "@/components/Navbar";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
 import TypingEngine from "@/components/TypingEngine";
-import { apiFetch, requireOk } from "@/lib/api";
+import { apiFetch, getErrorMessage, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
@@ -35,6 +35,7 @@ export default function Home() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [selectedKeyboard, setSelectedKeyboard] = useState<string>(
     () => getStoredValue("selectedKeyboard") ?? "",
   );
@@ -77,6 +78,7 @@ export default function Home() {
     if (logs.length === 0 || !user) return false;
 
     setSaveStatus("saving");
+    setSaveError(null);
     try {
       const token = await user.getIdToken();
       const response = await apiFetch("/telemetry/", {
@@ -110,7 +112,9 @@ export default function Home() {
       setSaveStatus("saved");
       return true;
     } catch (err) {
-      console.error("Telemetry sync failed:", err);
+      const message = getErrorMessage(err, "Telemetry sync failed.");
+      console.warn(`Telemetry sync failed: ${message}`);
+      setSaveError(message);
       setSaveStatus("error");
       return false;
     }
@@ -140,12 +144,14 @@ export default function Home() {
   const handleReset = () => {
     hasSavedSession.current = false;
     setSaveStatus("idle");
+    setSaveError(null);
     clearLogs();
   };
 
   const restartTypingSession = () => {
     hasSavedSession.current = false;
     setSaveStatus("idle");
+    setSaveError(null);
     setIsTestComplete(false);
     setWpm(0);
     setAccuracy(100);
@@ -242,7 +248,7 @@ export default function Home() {
                   {saveStatus === "saving" && "Saving telemetry..."}
                   {saveStatus === "saved" && "Telemetry saved automatically."}
                   {saveStatus === "error" &&
-                    "Automatic save failed. Check the API connection."}
+                    `Automatic save failed. ${saveError ?? "Check the API connection."}`}
                 </p>
               </div>
             </header>

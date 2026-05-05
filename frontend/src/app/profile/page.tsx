@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import KeyPerformancePanel from "@/components/KeyPerformancePanel";
 import Navbar from "@/components/Navbar";
-import { apiFetch, requireOk } from "@/lib/api";
+import { apiFetch, getErrorMessage, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
@@ -113,8 +113,9 @@ export default function ProfilePage() {
         setSessions(await sessionsResponse.json());
         setLeaderboard(await leaderboardResponse.json());
       } catch (err) {
-        console.error("Profile load failed:", err);
-        setError("Could not load profile data.");
+        const message = getErrorMessage(err, "Could not load profile data.");
+        console.warn(`Profile load failed: ${message}`);
+        setError(message);
       } finally {
         setIsLoading(false);
       }
