@@ -4,6 +4,17 @@ Keynostics is a web application for measuring typing performance and keyboard la
 
 The project is designed for physical keyboard testing. Mobile and software keyboards can distort latency measurements because browser key events and input timing do not behave the same way as hardware keyboard events.
 
+## Why Keynostics Is Different
+
+Keynostics goes beyond a standard typing speed test by pairing typing results with keyboard latency diagnostics. Instead of only reporting WPM and accuracy, it records per-key timing so users can see how their keyboard, browser, device, and typing rhythm affect each session.
+
+- Combines typing performance with per-key latency measurement
+- Tracks dwell time, flight time, correctness, and sequence data for each key event
+- Supports hardware profile selection so results can be compared by keyboard setup
+- Stores authenticated session history for long-term progress tracking
+- Provides profile summaries and leaderboard views from saved telemetry
+- Focuses on practical browser-based diagnostics without requiring special hardware
+
 ## Features
 
 - Typing tests in words mode and code mode
@@ -35,20 +46,23 @@ Keynostics captures browser keyboard events during a typing test.
 
 ### Frontend
 
-- Next.js 16 with App Router
-- React 19
-- TypeScript
+- Next.js 16.2.4 with App Router
+- React 19.2.4
+- TypeScript 5
 - Tailwind CSS 4
-- Firebase Authentication
-- Recharts for latency visualization
+- Firebase Web SDK for authentication
+- Recharts for charts and latency visualization
+- ESLint with Next.js configuration
 
 ### Backend
 
 - FastAPI
+- Uvicorn ASGI server
 - SQLAlchemy
 - Pydantic
 - Firebase Admin SDK
-- Uvicorn
+- python-dotenv for local environment loading
+- psycopg2 for PostgreSQL connectivity
 
 ### Database
 
@@ -161,9 +175,18 @@ npm run start    # Start the production server after building
 npm run lint     # Run ESLint
 ```
 
-## API Overview
+## Endpoints
 
-All telemetry endpoints require a Firebase bearer token.
+The backend exposes a FastAPI JSON API. All application endpoints require a Firebase bearer token in the `Authorization` header:
+
+```text
+Authorization: Bearer <firebase-id-token>
+```
+
+Base URLs:
+
+- Local backend: `http://localhost:8000`
+- Production backend: configured in the frontend with `NEXT_PUBLIC_API_URL`
 
 ### `POST /telemetry/`
 
@@ -178,9 +201,15 @@ The payload includes:
 - Accuracy
 - Per-key telemetry data
 
+Response: the saved telemetry session.
+
 ### `GET /telemetry/`
 
-Returns saved telemetry sessions for the authenticated user.
+Returns full saved telemetry sessions for the authenticated user, ordered from newest to oldest.
+
+### `GET /telemetry/sessions`
+
+Returns saved session summaries for the authenticated user, ordered from newest to oldest. This is useful for profile and history views that do not need the full raw telemetry payload.
 
 ### `GET /users/me/profile`
 
@@ -193,6 +222,13 @@ Returns ranked users based on saved session performance.
 ### `GET /leaderboard/{firebase_uid}`
 
 Returns detailed leaderboard data, mode breakdowns, and recent sessions for a selected user.
+
+### Backend API Docs
+
+FastAPI also provides generated documentation when the backend is running:
+
+- Swagger UI: `http://localhost:8000/docs`
+- OpenAPI schema: `http://localhost:8000/openapi.json`
 
 ## Data Model Summary
 
@@ -219,22 +255,51 @@ Each keystroke entry can include:
 - Expected key
 - Correctness flag
 
-## Deployment Notes
+## Deployments
 
 The project is structured for separate frontend and backend deployments.
 
-Typical deployment targets:
+### Frontend Deployment
 
-- Frontend: Vercel or another Next.js hosting provider
-- Backend: Docker-capable host such as Hugging Face Spaces, Render, Fly.io, or a VM
-- Database: PostgreSQL provider such as Neon
+Typical target: Vercel or another Next.js hosting provider.
 
-Production configuration should include:
+Required production configuration:
 
-- `NEXT_PUBLIC_API_URL` pointing to the deployed backend
-- Firebase web configuration on the frontend
-- `DATABASE_URL` on the backend
-- `FIREBASE_JSON` or an equivalent service account credential on the backend
+- `NEXT_PUBLIC_API_URL` pointing to the deployed backend URL
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+
+Build command:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+### Backend Deployment
+
+Typical target: Docker-capable hosts such as Hugging Face Spaces, Render, Fly.io, Railway, or a VM.
+
+Required production configuration:
+
+- `DATABASE_URL` pointing to PostgreSQL
+- `FIREBASE_JSON` containing the Firebase service account JSON string
+
+The backend Dockerfile starts Uvicorn on port `7860`:
+
+```bash
+cd backend
+docker build -t keynostics-api .
+docker run -p 7860:7860 --env-file .env keynostics-api
+```
+
+### Database Deployment
+
+Typical target: Neon, Supabase, Render PostgreSQL, Railway PostgreSQL, or another managed PostgreSQL provider.
+
+The backend creates SQLAlchemy tables on startup and stores per-session telemetry in JSON/JSONB-compatible columns. Existing deployments should keep the same database connection string unless migrating data intentionally.
 
 ## Notes on Measurement Accuracy
 
