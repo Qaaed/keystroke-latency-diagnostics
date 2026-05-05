@@ -30,7 +30,18 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <div className="mobile-device-notice">
+          <div>
+            <h1>Desktop required</h1>
+            <p>
+              Keynostics needs a physical keyboard. Please access this from
+              your computer only.
+            </p>
+          </div>
+        </div>
+        <div className="desktop-app-shell">{children}</div>
+      </body>
     </html>
   );
 }
