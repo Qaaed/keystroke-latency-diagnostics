@@ -46,7 +46,7 @@ export default function LoginPage() {
         {/* Sleek Minimal Header */}
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-medium tracking-tight text-zinc-100">
-            Keystroke Diagnostics
+            Keynostics
           </h1>
           <p className="text-zinc-500 text-sm">
             Sign in to access your telemetry dashboard.
