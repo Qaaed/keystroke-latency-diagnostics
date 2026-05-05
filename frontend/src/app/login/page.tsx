@@ -48,8 +48,10 @@ export default function LoginPage() {
           <h1 className="text-2xl font-medium tracking-tight text-zinc-100">
             Keynostics
           </h1>
-          <p className="text-zinc-500 text-sm">
-            Sign in to access your telemetry dashboard.
+          <p className="text-sm leading-6 text-zinc-500">
+            Measure typing speed, accuracy, key dwell time, and key-to-key
+            latency to understand how your keyboard responds while you type.
+            Compare results on the leaderboard and compete with other typers.
           </p>
         </div>
         
