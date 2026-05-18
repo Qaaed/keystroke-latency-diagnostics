@@ -99,6 +99,9 @@ keystroke-latency-diagnostics/
       lib/                  API, Firebase, and metrics helpers
       types/                Shared TypeScript types
     package.json            Frontend scripts and dependencies
+    Dockerfile              Frontend standalone Next.js image
+
+  docker-compose.yml        Local full-stack Docker setup
 ```
 
 ## Requirements
@@ -109,6 +112,7 @@ keystroke-latency-diagnostics/
 - PostgreSQL database connection string
 - Firebase project for authentication
 - Firebase service account credentials for the backend
+- Docker and Docker Compose, if running the containerized stack
 
 ## Environment Variables
 
@@ -124,6 +128,16 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 ```
 
 `NEXT_PUBLIC_API_URL` is optional in code because the frontend has a production fallback, but it should be set for local development.
+
+For Docker Compose, expose the Firebase web values to Compose from your shell or a root `.env` file:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-web-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+```
+
+The Compose file builds the frontend with `NEXT_PUBLIC_API_URL=http://localhost:7860` so the browser can call the containerized backend through the host-mapped backend port.
 
 ### Backend
 
@@ -141,6 +155,31 @@ For Firebase Admin credentials, use one of the following:
 Do not commit real credentials or private keys.
 
 ## Local Development
+
+### Docker Compose
+
+Use Docker Compose to run the full stack locally:
+
+```bash
+docker compose up --build
+```
+
+The services will be available at:
+
+```text
+Frontend: http://localhost:3000
+Backend:  http://localhost:7860
+API docs: http://localhost:7860/docs
+```
+
+Compose reads backend secrets from `backend/.env`. Frontend Firebase public values must be available to Compose from the shell environment or a root `.env` file before the frontend image is built.
+
+To rebuild after changing frontend environment values:
+
+```bash
+docker compose build --no-cache frontend
+docker compose up
+```
 
 ### Backend
 
@@ -171,6 +210,34 @@ The frontend will run at:
 ```text
 http://localhost:3000
 ```
+
+## Docker Images
+
+### Backend Image
+
+The backend Dockerfile builds a FastAPI/Uvicorn image from `python:3.10-slim` and exposes port `7860`.
+
+```bash
+cd backend
+docker build -t keynostics-api .
+docker run --env-file .env -p 7860:7860 keynostics-api
+```
+
+### Frontend Image
+
+The frontend Dockerfile builds a standalone Next.js production image with Node 20 Alpine. Public Next.js environment variables are build arguments, so provide them when building the image.
+
+```powershell
+cd frontend
+docker build -t keynostics-web ^
+  --build-arg NEXT_PUBLIC_API_URL=http://localhost:7860 ^
+  --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-web-api-key ^
+  --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com ^
+  --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id .
+docker run -p 3000:3000 keynostics-web
+```
+
+On macOS or Linux shells, replace the PowerShell line-continuation character `^` with `\`.
 
 ## Frontend Scripts
 
@@ -269,9 +336,11 @@ Each keystroke entry can include:
  
 | Aspect | Details |
 |---|---|
-| **Target Platforms** | Vercel, Next.js hosting providers |
+| **Target Platforms** | Vercel, Next.js hosting providers, Docker-capable hosts |
 | **Environment Variables** | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID` |
 | **Build Command** | `cd frontend && npm install && npm run build` |
+| **Docker Build** | `cd frontend && docker build -t keynostics-web --build-arg NEXT_PUBLIC_API_URL=<backend-url> --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=<key> --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<domain> --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=<project-id> .` |
+| **Container Port** | `3000` |
  
 ### Backend Deployment
  
