@@ -82,6 +82,11 @@ Keynostics captures browser keyboard events during a typing test.
 
 ```text
 keystroke-latency-diagnostics/
+  .github/
+    workflows/
+      ci.yml                Pull request and main branch checks
+      docker-publish.yml    GHCR image publishing workflow
+
   backend/
     main.py                 FastAPI routes and Firebase auth checks
     database.py             SQLAlchemy engine and session setup
@@ -248,6 +253,37 @@ npm run dev      # Start the local development server
 npm run build    # Build the production app
 npm run start    # Start the production server after building
 npm run lint     # Run ESLint
+```
+
+## CI/CD
+
+GitHub Actions workflows live in `.github/workflows/`.
+
+### CI
+
+`ci.yml` runs on pull requests and pushes to `main`.
+
+- Installs frontend dependencies with `npm ci`
+- Runs `npm run lint`
+- Builds the Next.js frontend with placeholder public Firebase values
+- Installs backend Python dependencies
+- Compiles backend Python files
+- Builds the backend and frontend Docker images without pushing them
+
+### Docker Publish
+
+`docker-publish.yml` runs on pushes to `main`, version tags matching `v*.*.*`, and manual dispatches. It publishes two images to GitHub Container Registry:
+
+- `ghcr.io/<owner>/<repo>-api`
+- `ghcr.io/<owner>/<repo>-web`
+
+The workflow uses `GITHUB_TOKEN` for GHCR publishing. Configure these GitHub Actions repository variables before publishing the frontend image:
+
+```text
+NEXT_PUBLIC_API_URL
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ```
 
 ## Endpoints
