@@ -277,7 +277,7 @@ GitHub Actions workflows live in `.github/workflows/`.
 - `ghcr.io/<owner>/<repo>-api`
 - `ghcr.io/<owner>/<repo>-web`
 
-The workflow uses `GITHUB_TOKEN` for GHCR publishing. Configure these GitHub Actions repository variables before publishing the frontend image:
+The workflow uses `GITHUB_TOKEN` for GHCR publishing. It falls back to placeholder frontend values so image publishing can still run, but configure these GitHub Actions repository variables before using the published frontend image in production:
 
 ```text
 NEXT_PUBLIC_API_URL
