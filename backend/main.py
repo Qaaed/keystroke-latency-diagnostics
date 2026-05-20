@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import List
 
 import firebase_admin
@@ -11,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth, credentials
 from sqlalchemy import func, inspect, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -73,6 +74,9 @@ except Exception as e:
 
 security = HTTPBearer()
 
+PUBLIC_PROFILE_CACHE_TTL_SECONDS = 300
+public_profile_cache = {}
+
 
 def get_current_user(token: HTTPAuthorizationCredentials = Depends(security)):
     try:
@@ -113,18 +117,29 @@ def build_user_stats_query(db: Session):
 
 
 def get_public_user_profile(firebase_uid: str):
+    now = time.monotonic()
+    cached_profile = public_profile_cache.get(firebase_uid)
+    if cached_profile and now - cached_profile["cached_at"] < PUBLIC_PROFILE_CACHE_TTL_SECONDS:
+        return cached_profile["profile"]
+
     try:
         user = auth.get_user(firebase_uid)
-        return {
+        profile = {
             "display_name": user.display_name,
             "photo_url": user.photo_url,
         }
     except Exception as e:
         print(f"Unable to fetch Firebase user profile for {firebase_uid}: {e}")
-        return {
+        profile = {
             "display_name": None,
             "photo_url": None,
         }
+
+    public_profile_cache[firebase_uid] = {
+        "cached_at": now,
+        "profile": profile,
+    }
+    return profile
 
 
 @app.post("/telemetry/", response_model=schemas.TelemetryResponse)
@@ -170,6 +185,18 @@ def get_my_telemetry_sessions(
 ):
     return (
         db.query(models.TelemetrySession)
+        .options(
+            load_only(
+                models.TelemetrySession.id,
+                models.TelemetrySession.firebase_uid,
+                models.TelemetrySession.hardware_profile,
+                models.TelemetrySession.mode,
+                models.TelemetrySession.duration_seconds,
+                models.TelemetrySession.wpm,
+                models.TelemetrySession.accuracy,
+                models.TelemetrySession.created_at,
+            )
+        )
         .filter(models.TelemetrySession.firebase_uid == firebase_uid)
         .order_by(models.TelemetrySession.created_at.desc())
         .all()

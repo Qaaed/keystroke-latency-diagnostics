@@ -137,7 +137,6 @@ export default function Navbar({
           <div className="flex items-center gap-2">
             <Link
               href="/"
-              prefetch={false}
               className="block truncate text-xs font-semibold uppercase tracking-wide text-zinc-100 transition-colors hover:text-white"
             >
               Keynostics
@@ -181,7 +180,6 @@ export default function Navbar({
               <Link
                 key={item.page}
                 href={item.href}
-                prefetch={false}
                 className={`rounded px-3 py-1.5 text-xs font-semibold uppercase transition-colors ${
                   activePage === item.page
                     ? "bg-zinc-100 text-zinc-950"
@@ -196,7 +194,6 @@ export default function Navbar({
           <div className="flex items-center gap-2 rounded-md border border-zinc-800 bg-black/30 px-2 py-1">
             <Link
               href="/profile"
-              prefetch={false}
               className="flex min-w-0 items-center gap-2 text-zinc-200 transition-colors hover:text-white"
               aria-label="Open profile"
             >

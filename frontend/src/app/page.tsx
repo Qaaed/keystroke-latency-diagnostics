@@ -8,10 +8,11 @@ import Navbar, {
 } from "@/components/Navbar";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
 import TypingEngine from "@/components/TypingEngine";
+import { useAuth } from "@/components/AuthProvider";
+import LoadingState from "@/components/LoadingState";
 import { apiFetch, getErrorMessage, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import type { User } from "firebase/auth";
+import { signOut } from "firebase/auth";
 
 const UNSPECIFIED_KEYBOARD = "keyboard not specified";
 
@@ -23,9 +24,8 @@ function getStoredValue(key: string) {
 export default function Home() {
   const router = useRouter();
   const { logs, clearLogs, recordKeyDown, recordKeyUp } = useTelemetry();
+  const { user, isAuthLoading } = useAuth();
   const hasSavedSession = useRef(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
   const [isTestComplete, setIsTestComplete] = useState(false);
@@ -49,16 +49,8 @@ export default function Home() {
       : selectedKeyboard || UNSPECIFIED_KEYBOARD;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setIsAuthLoading(false);
-      } else {
-        router.push("/login");
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
+    if (!isAuthLoading && !user) router.push("/login");
+  }, [isAuthLoading, router, user]);
 
   useEffect(() => {
     if (selectedKeyboard) {
@@ -189,19 +181,11 @@ export default function Home() {
   );
 
   if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans text-zinc-500">
-        Loading...
-      </div>
-    );
+    return <LoadingState label="Checking session" fullScreen />;
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans text-zinc-500">
-        Redirecting...
-      </div>
-    );
+    return <LoadingState label="Redirecting" fullScreen />;
   }
 
   return (

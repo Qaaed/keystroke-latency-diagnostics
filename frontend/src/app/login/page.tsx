@@ -1,24 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
+import LoadingState from "@/components/LoadingState";
 import { auth } from "@/lib/firebase";
-import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, isAuthLoading } = useAuth();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router.push("/");
-      } else {
-        setIsChecking(false);
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
+    if (!isAuthLoading && user) router.push("/");
+  }, [isAuthLoading, router, user]);
 
   const handleGoogleLogin = async () => {
     setIsAuthenticating(true);
@@ -31,12 +26,8 @@ export default function LoginPage() {
     }
   };
 
-  if (isChecking) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans text-zinc-500">
-        Authenticating...
-      </div>
-    );
+  if (isAuthLoading || user) {
+    return <LoadingState label="Authenticating" fullScreen />;
   }
 
   return (
