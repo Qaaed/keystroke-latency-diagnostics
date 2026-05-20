@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 import KeyPerformancePanel from "@/components/KeyPerformancePanel";
+import LoadingState, { LoadingRows } from "@/components/LoadingState";
 import Navbar from "@/components/Navbar";
 import { apiFetch, getErrorMessage, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 
 type ProfileStats = {
@@ -66,33 +68,24 @@ function displayUserName(entry: LeaderboardEntry, currentUser: User | null) {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthLoading } = useAuth();
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [isTelemetryLoading, setIsTelemetryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileStats | null>(null);
-  const [sessions, setSessions] = useState<TelemetrySession[]>([]);
+  const [sessionSummaries, setSessionSummaries] = useState<TelemetrySession[]>([]);
+  const [telemetrySessions, setTelemetrySessions] = useState<TelemetrySession[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        router.push("/login");
-        return;
-      }
-
-      setUser(currentUser);
-      setIsAuthLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    if (!isAuthLoading && !user) router.push("/login");
+  }, [isAuthLoading, router, user]);
 
   useEffect(() => {
     if (!user) return;
 
-    const loadProfile = async () => {
-      setIsLoading(true);
+    const loadProfileSummary = async () => {
+      setIsSummaryLoading(true);
       setError(null);
 
       try {
@@ -101,7 +94,7 @@ export default function ProfilePage() {
         const [profileResponse, sessionsResponse, leaderboardResponse] =
           await Promise.all([
             apiFetch("/users/me/profile", { headers }),
-            apiFetch("/telemetry/", { headers }),
+            apiFetch("/telemetry/sessions", { headers }),
             apiFetch("/leaderboard", { headers }),
           ]);
 
@@ -110,18 +103,39 @@ export default function ProfilePage() {
         await requireOk(leaderboardResponse);
 
         setProfile(await profileResponse.json());
-        setSessions(await sessionsResponse.json());
+        setSessionSummaries(await sessionsResponse.json());
         setLeaderboard(await leaderboardResponse.json());
       } catch (err) {
         const message = getErrorMessage(err, "Could not load profile data.");
         console.warn(`Profile load failed: ${message}`);
         setError(message);
       } finally {
-        setIsLoading(false);
+        setIsSummaryLoading(false);
       }
     };
 
-    loadProfile();
+    const loadTelemetry = async () => {
+      setIsTelemetryLoading(true);
+
+      try {
+        const token = await user.getIdToken();
+        const response = await apiFetch("/telemetry/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        await requireOk(response);
+        setTelemetrySessions(await response.json());
+      } catch (err) {
+        const message = getErrorMessage(err, "Could not load key telemetry.");
+        console.warn(`Telemetry load failed: ${message}`);
+        setError((currentError) => currentError ?? message);
+      } finally {
+        setIsTelemetryLoading(false);
+      }
+    };
+
+    loadProfileSummary();
+    loadTelemetry();
   }, [user]);
 
   const currentRank = useMemo(() => {
@@ -130,11 +144,7 @@ export default function ProfilePage() {
   }, [leaderboard, user]);
 
   if (isAuthLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] font-sans text-zinc-500">
-        Loading...
-      </div>
-    );
+    return <LoadingState label="Checking session" fullScreen />;
   }
 
   return (
@@ -222,7 +232,10 @@ export default function ProfilePage() {
               </div>
 
               <div className="p-5">
-                <KeyPerformancePanel sessions={sessions} isLoading={isLoading} />
+                <KeyPerformancePanel
+                  sessions={telemetrySessions}
+                  isLoading={isTelemetryLoading}
+                />
               </div>
             </section>
 
@@ -234,14 +247,14 @@ export default function ProfilePage() {
               </div>
 
               <div className="divide-y divide-zinc-800">
-                {isLoading ? (
-                  <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
-                ) : sessions.length === 0 ? (
+                {isSummaryLoading ? (
+                  <LoadingRows rows={4} />
+                ) : sessionSummaries.length === 0 ? (
                   <p className="px-5 py-6 text-sm text-zinc-500">
                     No telemetry sessions saved yet.
                   </p>
                 ) : (
-                  sessions.slice(0, 8).map((session) => (
+                  sessionSummaries.slice(0, 8).map((session) => (
                     <div
                       key={session.id}
                       className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto_auto]"
@@ -278,8 +291,8 @@ export default function ProfilePage() {
             </div>
 
             <div className="divide-y divide-zinc-800">
-              {isLoading ? (
-                <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
+              {isSummaryLoading ? (
+                <LoadingRows rows={5} />
               ) : leaderboard.length === 0 ? (
                 <p className="px-5 py-6 text-sm text-zinc-500">
                   No ranked users yet.

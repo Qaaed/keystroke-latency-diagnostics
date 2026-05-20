@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 import KeyPerformancePanel from "@/components/KeyPerformancePanel";
+import LoadingState, { LoadingRows } from "@/components/LoadingState";
 import Navbar from "@/components/Navbar";
 import { apiFetch, getErrorMessage, requireOk } from "@/lib/api";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 
 type LeaderboardEntry = {
@@ -134,8 +136,7 @@ function Avatar({
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const { user, isAuthLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,18 +146,8 @@ export default function LeaderboardPage() {
   const [areDetailsUnavailable, setAreDetailsUnavailable] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        router.push("/login");
-        return;
-      }
-
-      setUser(currentUser);
-      setIsAuthLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    if (!isAuthLoading && !user) router.push("/login");
+  }, [isAuthLoading, router, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -249,11 +240,7 @@ export default function LeaderboardPage() {
   }, [leaderboard, selectedEntry]);
 
   if (isAuthLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] font-sans text-zinc-500">
-        Loading...
-      </div>
-    );
+    return <LoadingState label="Checking session" fullScreen />;
   }
 
   return (
@@ -295,7 +282,7 @@ export default function LeaderboardPage() {
 
             <div className="divide-y divide-zinc-800">
               {isLoading ? (
-                <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
+                <LoadingRows rows={5} />
               ) : leaderboard.length === 0 ? (
                 <p className="px-5 py-6 text-sm text-zinc-500">
                   No ranked users yet.
@@ -437,7 +424,7 @@ export default function LeaderboardPage() {
 
               <div className="divide-y divide-zinc-800">
                 {isLoading ? (
-                  <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
+                  <LoadingRows rows={3} />
                 ) : adjacentRanks.length === 0 ? (
                   <p className="px-5 py-6 text-sm text-zinc-500">
                     No ranking context available.
@@ -521,7 +508,7 @@ export default function LeaderboardPage() {
 
               <div className="divide-y divide-zinc-800">
                 {isDetailsLoading ? (
-                  <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
+                  <LoadingRows rows={3} />
                 ) : areDetailsUnavailable ? (
                   <p className="px-5 py-6 text-sm leading-6 text-zinc-500">
                     Mode and time breakdown is not available from the current
@@ -574,7 +561,7 @@ export default function LeaderboardPage() {
 
               <div className="divide-y divide-zinc-800">
                 {isDetailsLoading ? (
-                  <p className="px-5 py-6 text-sm text-zinc-500">Loading...</p>
+                  <LoadingRows rows={3} />
                 ) : areDetailsUnavailable ? (
                   <p className="px-5 py-6 text-sm leading-6 text-zinc-500">
                     Recent per-session details require the leaderboard detail

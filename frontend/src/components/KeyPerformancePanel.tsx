@@ -1,3 +1,5 @@
+import LoadingState from "@/components/LoadingState";
+
 type KeystrokeEntry = {
   key: string;
   dwell_time: number;
@@ -240,7 +242,7 @@ export default function KeyPerformancePanel({
 }) {
   const insights = buildKeyInsights(sessions);
 
-  if (isLoading) return <p className="text-sm text-zinc-500">Loading...</p>;
+  if (isLoading) return <LoadingState label="Loading key telemetry" />;
 
   if (insights.totalKeys === 0) {
     return <p className="text-sm text-zinc-500">{emptyText}</p>;
